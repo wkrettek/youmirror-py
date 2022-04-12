@@ -25,8 +25,24 @@
     "singles":
     [
         {
-            "url": "https://www.youtube.com/watch?v=Pa_HT9vQiLw"
+            "name": "Prawns From Space",
+            "url": "https://www.youtube.com/watch?v=Pa_HT9vQiLw",
+            "locked": "true"
+        },
+        {
+            "url": "https://www.youtube.com/watch?v=x2AQp_B-keY"
+        },
+        {
+            "url": "https://www.youtube.com/watch?v=RZd_seybEPs"
+        },
+        {
+            "name": "Shake it bake it booty quake it",
+            "url": "https://www.youtube.com/watch?v=1AYRsx-l5W4"
+        },
+        {
+            "url": "https://www.youtube.com/watch?v=ZmCp8rvXbdU"
         }
+
     ]
 
 

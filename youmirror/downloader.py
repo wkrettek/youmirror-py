@@ -1,44 +1,48 @@
 from pytube import YouTube
 from typing import Optional
 import logging
+import os
 
 
-def download_single(
-    self, 
+def download_video( 
     url: str, 
     filename: Optional[str] = None, 
     output_path : Optional[str] = "", 
-    is_channel: bool = False, 
-    is_playlist : bool = False,
-    playlist_title: str = ""
-) -> None:
+) -> str:
     '''
     Download a single video
     '''
     yt = YouTube(url)
     title = yt.title
     author = yt.author
-    if not url:
-        self.logger.error("No URL provided")
-        return
+    stream = yt.streams.get_highest_resolution()
+    # Must have the root in the path
+    output_path += "videos/"
     if not filename:
-        filename = title + '.mp4'
-
-    output_path += self.root    # Must have the root in the path
-    if is_channel:              # Include author if the channel called us
-        output_path += author 
-    elif is_playlist:           # Include playlist title if the playlist called us
-        output_path += playlist_title
-    else:                       # Otherwise it's a single
-        output_path += "singles/"
+        filename = stream.default_filename
+    print(f'Saving {title} to {output_path + filename}')
     
     # Download the video
     logging.info("Downloading %s to %s", url, output_path)
     try:
-        yt.streams.filter(progressive=True, file_extension='mp4').order_by('resolution').desc().first().download(output_path=output_path, filename=filename)
+        stream.download(output_path, filename)
     except FileNotFoundError:   # If the directory doesn't exist, create it
         logging.info(f"Creating directory {output_path}")
         os.makedirs(output_path, exist_ok=True)
+    filepath = output_path + filename
+    return filepath # Return the filepath of the downloaded video
+
+def download_captions(
+    url: str,
+    filename: Optional[str] = None,
+    output_path: Optional[str] = "",
+    ) -> str:
+    '''
+    Download selected captions from a video
+    '''
+    filepath = ""
+    output_path += "videos/"
+    return filepath
 
 
 def download_channel(self, url: str, filename: Optional[str]) -> None:

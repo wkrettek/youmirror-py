@@ -1,21 +1,25 @@
-import youmirror.databaser as databaser
+import youmirror.parser as parser
 import youmirror.downloader as downloader
 from typing import (
     Optional
 )
 import logging
 import sqlite3
+from urllib import parse
+from sqlitedict import SqliteDict
 import ujson
 from pytube import YouTube
-import os
 from pathlib import Path
+from tqdm import tqdm
+import symbol
+import os
 
-# Create YouMirror Class
+# This is the main class for maintaining a youmirror
 class YouMirror:
 
     def __init__(
         self,
-        root : str = "./YouMirror",
+        root : str = "./YouMirror/",
         ) -> None:
         self.root = root
         self.dbpath = self.root + 'youmirror.db'
@@ -32,43 +36,59 @@ class YouMirror:
         except Exception as e:
             logging.exception(f"Could not parse given config file due to {e}")
         self.root = config['root']
+        self.dbpath = self.root + 'youmirror.db'
         # Keep track of the urls of all the different types of files
         # Load channels
         for channel in config["channels"]:
             self.channels.append(channel)
-            print(channel)
         # Load playlists
         for playlist in config["playlists"]:
             self.playlists.append(playlist)
-            print(playlist)
         # Load singles
         for single in config["singles"]:
             self.singles.append(single)
-            print(single)
 
     # Needs a little work, the root directory string gets printed strangely
     def new(
         self,
-        config_file: str
+        root : str = "./YouMirror/",
+        config_file: str = './youmirror.json'
         ) -> None:
         '''
         Create a new config file from the template
         '''
-        try:
-            from youmirror.template import template
-            open(config_file, "w+").write(ujson.dumps(template, indent=4))
-        except Exception as e:
-            print(f"Failed to create new config file due to {e}")
+        if Path(root + config_file).exists():
+            print("Config file already exists")
+            return
+        if not Path(root).exists():
+            os.mkdir(root)
+        print(root)
+        # try:
+        #     from youmirror.template import template
+        #     open(root + config_file, "w+").write(ujson.dumps(template, indent=4))
+        # except Exception as e:
+        #     print(f"Failed to create new config file due to {e}")
 
     def add(
         self,
         url: str,
-        download: bool
+        download: bool = False
         ) -> None:
         '''
         Adds the following url to the mirror and downloads the video(s)
         '''
-        pass
+        type = parser.link_type(url)    # Determine the type of the url
+        if type == "channel":
+            self.channels.append(url)
+        elif type == "playlist":
+            self.playlists.append(url)
+        elif type == "video":
+            self.singles.append(url)
+        else:
+            print(f"Invalid url {url}")
+            return
+        print(f"Added {type} to the mirror from {url}")
+        # Do I wanna add to json and then sync? Or 
 
     def remove(
         self,
@@ -86,9 +106,11 @@ class YouMirror:
         '''
         Syncs the mirror against the config file
         '''
+        to_download = list()    # Make a list of videos to download
         # Check if the database exists
             # If no database, create a new one
-        conn = databaser.connect_db(self.dbpath)
+        # conn = databaser.connect_db(self.dbpath)
+        # db = SqliteDict(self.dbpath)
         # Look through channels
             # For each video in channel
                 # Compare against database
@@ -98,15 +120,45 @@ class YouMirror:
             # For each video in playlist
                 # Compare against database
         # Look through singles
+        # Check if table exists
+        # if not databaser.table_exists(conn, 'singles'):
+        #     databaser.create_table(conn, 'singles')
+        # Mark singles for download
+        singles = SqliteDict(self.dbpath, tablename='singles', autocommit=True)
+        for single in self.singles:
             # Compare against database
+            url = single['url']
+            key = parse.quote_plus(url)
+            print(single)
+            if key not in singles:
+                to_download.append(single)
+
+        print(f"{len(to_download)} Videos to download")
+        # Download videos
         
-        pass
+        if len(to_download) > 0:
+            print("Downloading videos...")
+            for video in tqdm(to_download):
+                output_path = self.root + 'singles/'    # Set to the single path
+                url = video['url']                      # Get the url      
+                filepath = downloader.download_video(url=url, output_path=output_path)
+                # Add to database
+                key = parse.quote_plus(url)             # Make the key good for sqlite    
+                singles[key] = {"url": url, "filepath": filepath}   # Add to sqlite
 
     def check(
         self
         ) -> None:
         '''
-        Verify's which videos in the mirror are still available
+        Verifies which videos in the mirror are still available from Youtube
+        '''
+        pass
+
+    def show(
+        self
+        ) -> None:
+        '''
+        Prints the current state of the mirror
         '''
         pass
 

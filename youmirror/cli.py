@@ -2,6 +2,7 @@ __all__ = ['app', 'sync', 'add', 'remove', 'check', 'main', '__main__']
 
 import typer
 from typing import Optional, List
+from youmirror.core import YouMirror
 
 app = typer.Typer()
 
@@ -21,13 +22,27 @@ def sync(
     return
 
 @app.command()
+def new(
+    root : str = "./YouMirror/",
+    config_file: str = './youmirror.json'
+    ):
+    '''
+    Create a new config file from the template
+    '''
+    ym = YouMirror()
+    ym.new(root, config_file)
+    return
+
+@app.command()
 def add(
+    url : str,
     dry_run: bool = False
     ):
     '''
     Adds the specified channel, playlist, or single to the config file and downloads
     '''
-    print('add called')
+    yt = YouMirror()
+    yt.add(url)
     return
 
 @app.command()
