@@ -23,8 +23,8 @@ def sync(
 
 @app.command()
 def new(
-    root : str = "./YouMirror/",
-    config_file: str = './youmirror.json'
+    root : str = typer.Argument("./YouMirror/"),
+    config_file: str = 'youmirror.json'
     ):
     '''
     Create a new config file from the template

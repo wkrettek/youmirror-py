@@ -8,7 +8,7 @@ import sqlite3
 from urllib import parse
 from sqlitedict import SqliteDict
 import ujson
-from pytube import YouTube
+from pytube import YouTube, Channel, Playlist
 from pathlib import Path
 from tqdm import tqdm
 import symbol
@@ -52,7 +52,7 @@ class YouMirror:
     def new(
         self,
         root : str = "./YouMirror/",
-        config_file: str = './youmirror.json'
+        config_file: str = 'youmirror.json'
         ) -> None:
         '''
         Create a new config file from the template
@@ -62,12 +62,11 @@ class YouMirror:
             return
         if not Path(root).exists():
             os.mkdir(root)
-        print(root)
-        # try:
-        #     from youmirror.template import template
-        #     open(root + config_file, "w+").write(ujson.dumps(template, indent=4))
-        # except Exception as e:
-        #     print(f"Failed to create new config file due to {e}")
+        try:
+            from youmirror.template import template
+            open(root + config_file, "w+").write(ujson.dumps(template, indent=4))
+        except Exception as e:
+            print(f"Failed to create new config file due to {e}")
 
     def add(
         self,
@@ -87,6 +86,8 @@ class YouMirror:
         else:
             print(f"Invalid url {url}")
             return
+        if download:
+            self.sync()
         print(f"Added {type} to the mirror from {url}")
         # Do I wanna add to json and then sync? Or 
 
