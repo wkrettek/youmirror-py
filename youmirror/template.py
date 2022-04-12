@@ -1,7 +1,7 @@
 __all__ = ["template"]
 
 template = {
-    "root": "./YouMirror/",
+    "root": "ym",
     "default_resolution": "best",
     "captions":
     [

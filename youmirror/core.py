@@ -1,5 +1,6 @@
 import youmirror.parser as parser
 import youmirror.downloader as downloader
+import youmirror.helper as helper
 from typing import (
     Optional
 )
@@ -9,7 +10,7 @@ from urllib import parse
 from sqlitedict import SqliteDict
 import ujson
 from pytube import YouTube, Channel, Playlist
-from pathlib import Path
+from pathlib import Path    # Helpful for ensuring text values translate well to real directories
 from tqdm import tqdm
 import symbol
 import os
@@ -19,10 +20,13 @@ class YouMirror:
 
     def __init__(
         self,
-        root : str = "./YouMirror/",
+        root : str = ".",
         ) -> None:
         self.root = root
-        self.dbpath = self.root + 'youmirror.db'
+        self.db = 'youmirror.db'
+        self.dbpath = self.root + self.db
+        self.config_file = 'youmirror.json'
+        self.configpath = self.root + self.db
         self.channels = list()
         self.playlists = list()
         self.singles = list()
@@ -38,58 +42,89 @@ class YouMirror:
         self.root = config['root']
         self.dbpath = self.root + 'youmirror.db'
         # Keep track of the urls of all the different types of files
-        # Load channels
-        for channel in config["channels"]:
-            self.channels.append(channel)
-        # Load playlists
-        for playlist in config["playlists"]:
-            self.playlists.append(playlist)
-        # Load singles
-        for single in config["singles"]:
-            self.singles.append(single)
+        # Load all types of mirrables
+        self.channels = config['channels']
+        self.playlists = config['playlists']
+        self.singles = config['singles']
 
-    # Needs a little work, the root directory string gets printed strangely
+    def to_json(self) -> None:
+        """
+        Writes all the values from the YouMirror object into the config file
+        """
+        # Get the config file
+        configpath = self.configpath
+        urls = set()
+        try:
+            json = ujson.load(open(configpath))
+        except Exception as e:
+            print(e)
+        # Collect urls in 
+        for json_channels in json["channels"]:
+            urls.add(json_channels["url"])
+        # Look through channels
+            #
+        # Look through playlists
+        # Look through singles
+
+        pass
+
+    # Needs a little work, the root directory string gets printed strangely when filling out the template
     def new(
         self,
-        root : str = "./YouMirror/",
-        config_file: str = 'youmirror.json'
+        root : str = "./ym/"
         ) -> None:
         '''
-        Create a new config file from the template
+        Create a new mirror directory at the given path
         '''
-        if Path(root + config_file).exists():
-            print("Config file already exists")
-            return
-        if not Path(root).exists():
-            os.mkdir(root)
+        config_file = self.config_file
+        db = self.db
+        
+        # Create all the necessary files
+        if not helper.path_exists(root):                                # Check if the path exists
+            logging.info(f"Creating new mirror directory at {root}")
+            helper.create_path(root)                                    # If it doesn't, create it
+        if not helper.file_exists(root, config_file):                   # Check if the config file exists
+            logging.info(f"Creating config file at {root + config_file}")
+            helper.create_file(root, config_file)                       # If it doesn't, create it
+        if not helper.file_exists(root, db):                            # Check if the database exists
+            logging.info(f"Creating database at {root + db}")
+        helper.create_file(root, db)                                    # If it doesn't create it
+
+        # Fill out the config file with a template
         try:
             from youmirror.template import template
-            open(root + config_file, "w+").write(ujson.dumps(template, indent=4))
+            path = Path(root)       # Wrap it to ensure it's 
+            filepath = path/Path(config_file)
+            filepath.open(mode = "w").write(ujson.dumps(template, indent=4))
         except Exception as e:
             print(f"Failed to create new config file due to {e}")
 
     def add(
         self,
         url: str,
+        root: str,
         download: bool = False
         ) -> None:
         '''
         Adds the following url to the mirror and downloads the video(s)
         '''
-        type = parser.link_type(url)    # Determine the type of the url
-        if type == "channel":
-            self.channels.append(url)
-        elif type == "playlist":
-            self.playlists.append(url)
-        elif type == "video":
-            self.singles.append(url)
-        else:
-            print(f"Invalid url {url}")
-            return
-        if download:
-            self.sync()
-        print(f"Added {type} to the mirror from {url}")
-        # Do I wanna add to json and then sync? Or 
+        config_file = helper.get_config(root)
+        self.from_json(config_file)
+        print(f'channels are {self.channels}')
+        # type = parser.link_type(url)    # Determine the type of the url
+        # if type == "channel":
+        #     self.channels.append(url)
+        # elif type == "playlist":
+        #     self.playlists.append(url)
+        # elif type == "video":
+        #     self.singles.append(url)
+        # else:
+        #     print(f"Invalid url {url}")
+        #     return
+        # if download:
+        #     self.sync()
+        # print(f"Added {type} to the mirror from {url}")
+        # # Do I wanna add to json and then sync? Or 
 
     def remove(
         self,
@@ -98,6 +133,7 @@ class YouMirror:
         """
         Removes the following url from the mirror and deletes the video(s)
         """
+        # Search for json file
 
     
     def sync(
@@ -107,6 +143,9 @@ class YouMirror:
         '''
         Syncs the mirror against the config file
         '''
+        # Search for json file
+        # If it exists
+            # Switch to the directory 
         to_download = list()    # Make a list of videos to download
         # Check if the database exists
             # If no database, create a new one
@@ -164,9 +203,15 @@ class YouMirror:
         pass
 
 
+# Must be inside root directory:
+    # Config file
+    # Database file
+
 # I'd like to make download_single robust and have the other two call on it I think
 # Database name should be youmirror.db
 # | -- root
+#       youmirror.json
+#       youmirror.db
 #       | -- channels
 #               | -- channel name
 #                       | -- videos
