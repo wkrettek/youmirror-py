@@ -1,5 +1,6 @@
 from pytube import YouTube
 from typing import Optional
+import logging
 
 
 def download_single(

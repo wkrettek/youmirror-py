@@ -17,11 +17,16 @@
     ],
     "playlists":
     [
-        "https://www.youtube.com/playlist?list=PLBZw8Bdva63UAhbdAlbbYotegKhUMeSzN"
+        {
+            "url": "https://www.youtube.com/playlist?list=PLBZw8Bdva63UAhbdAlbbYotegKhUMeSzN"
+        }
+        
     ],
     "singles":
     [
-
+        {
+            "url": "https://www.youtube.com/watch?v=Pa_HT9vQiLw"
+        }
     ]
 
 

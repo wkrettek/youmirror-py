@@ -1,3 +1,5 @@
+import youmirror.databaser as databaser
+import youmirror.downloader as downloader
 from typing import (
     Optional
 )
@@ -13,28 +15,80 @@ class YouMirror:
 
     def __init__(
         self,
-        root : str = "./youmirror",
+        root : str = "./YouMirror",
         ) -> None:
-        self.logger = logging.getLogger(__name__)
+        self.root = root
         self.dbpath = self.root + 'youmirror.db'
-        self.channels = {}
-        self.playlists = []
-        self.singles = []
-        # self.db = sqlite3.connect(self.root + 'youmirror.db')
+        self.channels = list()
+        self.playlists = list()
+        self.singles = list()
 
     def from_json(self, json_file: str) -> None:
         '''
-        Load a json file
+        Load a json file into the YouMirror object
         '''
-        json = ujson.load(open(json_file))
-        self.root = json['root']
+        try:
+            config = ujson.load(open(json_file))
+        except Exception as e:
+            logging.exception(f"Could not parse given config file due to {e}")
+        self.root = config['root']
+        # Keep track of the urls of all the different types of files
+        # Load channels
+        for channel in config["channels"]:
+            self.channels.append(channel)
+            print(channel)
+        # Load playlists
+        for playlist in config["playlists"]:
+            self.playlists.append(playlist)
+            print(playlist)
+        # Load singles
+        for single in config["singles"]:
+            self.singles.append(single)
+            print(single)
 
-    def sync():
+    # Needs a little work, the root directory string gets printed strangely
+    def new(
+        self,
+        config_file: str
+        ) -> None:
         '''
-        Syncs the file tree and database against the config file
+        Create a new config file from the template
+        '''
+        try:
+            from youmirror.template import template
+            open(config_file, "w+").write(ujson.dumps(template, indent=4))
+        except Exception as e:
+            print(f"Failed to create new config file due to {e}")
+
+    def add(
+        self,
+        url: str,
+        download: bool
+        ) -> None:
+        '''
+        Adds the following url to the mirror and downloads the video(s)
+        '''
+        pass
+
+    def remove(
+        self,
+        url: str
+        ) -> None:
+        """
+        Removes the following url from the mirror and deletes the video(s)
+        """
+
+    
+    def sync(
+        self,
+        config_file: str
+        ) -> None:
+        '''
+        Syncs the mirror against the config file
         '''
         # Check if the database exists
             # If no database, create a new one
+        conn = databaser.connect_db(self.dbpath)
         # Look through channels
             # For each video in channel
                 # Compare against database
@@ -48,9 +102,11 @@ class YouMirror:
         
         pass
 
-    def check():
+    def check(
+        self
+        ) -> None:
         '''
-        
+        Verify's which videos in the mirror are still available
         '''
         pass
 
