@@ -6,53 +6,56 @@ from pathlib import Path
 import logging
 import sys
 
-def file_exists(path : str = "./", filename : str = "") -> bool:
+
+def get_path(path : str, filename : str) -> Path:
+    '''
+    Wraps a path and filename into a Path object
+    '''
+    path = Path(path)   # Wrap the path
+    filepath = path/Path(filename)
+    return filepath
+
+def file_exists(filepath: Path) -> bool:
     '''
     Checks if the config exists in the current working directory
     '''
-    path = Path(path)                   # Wrap up the path
-    filepath = path / Path(filename)    # Build the full path to the file
     try:
-        return filepath.exists()              # Check if the file exists
+        return filepath.is_file()              # Check if the file exists
     except Exception as e:
         logging.info(f"Could not check file {filepath} due to {e}")
         return False
 
-def create_file(path: str, filename: str) -> None:
+def create_file(filepath: Path) -> None:
     '''
     Creates a file given a path and filename
     '''
-    path = Path(path)                   # Wrap up the path
-    filepath = path/Path(filename)      # Create full filepath
     try:
-        filepath.open(mode = "w")
+        if not filepath.is_file():
+            filepath.open(mode = "w")
     except Exception as e:
         print(e)
 
-def path_exists(path: str) -> bool:
+def path_exists(path: Path) -> bool:
     '''
     Checks if a path exists
     '''
-    return Path(path).is_dir()
+    return path.is_dir()
 
-def create_path(path: str) -> None:
+def create_path(path: Path) -> None:
     '''
     Creates the path 
     '''
     try:
-        path = Path(path)   # Wrap up the path
-        path.mkdir(parents = True, exist_ok = True)
+        if not path.is_dir():
+            path.mkdir(parents = True, exist_ok = True)     
     except Exception as e:
         print(e)
 
-def get_config(path : str) -> Path:
+def verify_config(filepath: Path) -> Path:
     '''
     Find the config file in the current working directory
     '''
-    path = Path(path)   # Wrap the path
-    filepath = path/Path('youmirror.json')
     if  filepath.exists():
         return filepath
     else:
-        logging.error(f'Could not find config file in root {path}')
-        sys.exit()
+        return None

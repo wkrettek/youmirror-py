@@ -1,7 +1,6 @@
 __all__ = ["template"]
 
 template = {
-    "root": "ym",
     "default_resolution": "best",
     "captions":
     [
@@ -9,25 +8,15 @@ template = {
         "a.en"
     ],
     "channels":
-    [
-        {
-            "name": "",
-            "url": ""
-        }
-    ],
-    "playlists":
-    [
-        {
-            "name": "",
-            "url": ""
-        }
+    {
 
-    ],
+    },
+    "playlists":
+    {
+
+    },
     "singles":
-    [
-        {
-            "name": "",
-            "url": ""
-        }
-    ]
+    {
+
+    }
 }
