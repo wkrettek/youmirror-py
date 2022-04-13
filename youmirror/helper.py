@@ -8,8 +8,6 @@ import sys
 from pytube import Channel, Playlist, YouTube
 from typing import Union
 
-from youmirror.core import YouMirror
-
 
 def get_path(path : str, filename : str) -> Path:
     '''
@@ -79,14 +77,23 @@ def resolve_collision(yt: YouTube, filename: Path) -> Path:
     '''
     return ''
 
-# TODO
-def calculate_filename(yt: YouTube):
+# This can either get the filename from the pytube stream object, or it can generate
+# It itself from the title
+# RESOLUTION: For now we will just use the title until this breaks things
+def calculate_filename(yt: YouTube) -> str:
     '''
     Determines the filename from the youtube object
         Must handle collision
     '''
     try:
-        stream = 
-        filename = Path(yt.)
-        filename = resolve_collision(yt, filename)
-    return ''
+        filename = yt.title
+        # filename = resolve_collision()
+        return filename
+    except Exception as e:
+        return None
+
+def calculate_path(yt: Union[Channel, Playlist, YouTube]) -> str:
+    '''
+    Determines the output path for the given pytube object
+    '''
+

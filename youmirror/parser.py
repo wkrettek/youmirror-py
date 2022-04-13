@@ -1,14 +1,12 @@
 # This file will parse information from youtube urls and deal with pytube objects
 from pytube import YouTube, Channel, Playlist
-from typing import Union, List, Dict
+from typing import Union, Callable, Any
 import youmirror.helper as helper
 import youmirror.configurer as configurer
 import logging
 import sys
-types = {"channel", "playlist", "video"}
 
-# In the future, this should be two functions, one that returns the type and one that checks if the link is valid. For now, it does both
-def check_link(url: str) -> str:
+def link_type(url: str) -> str:
     '''
     Really rough way to narrow down a link before creating a pytube object
     '''
@@ -21,7 +19,6 @@ def check_link(url: str) -> str:
         return "single"
     else:
         logging.error(f"\'{url}\' is not a valid url")
-        sys.exit()
         return None
 
 def get_metadata(yt: YouTube) -> dict:
@@ -38,17 +35,25 @@ def is_available(yt: YouTube) -> bool:
         logging.exception(f"Video {yt.title} is not available due to {e}")   # Need to report the url or the title if we can
     return True
 
-def get_pytube(url: str, type: str) -> Union[YouTube, Channel, Playlist]:
+def get_pytube(url: str) -> Union[YouTube, Channel, Playlist]:
     '''
-    Returns the proper pytube object for the url
+    Returns the proper pytube object from a url
     '''
     objects = {"channel": Channel, "playlist": Playlist, "single": YouTube}
+    url_type = link_type(url)                       # Returns what type of link it is
     try:
-        object = wrap_url(url, objects[type])   # Wrap the url in the proper pytube object
+        object = wrap_url(url, objects[url_type])   # Wrap the url in the proper pytube object
         return object
     except Exception as e:
         logging.exception(f"Failed to parse Youtube link due to {e}")
         return None         # This indicates something went wrong, but we will handle it above
+
+def resolve_pytube(yt: Union[Channel, Playlist, YouTube], do: dict[Any: Callable]):
+    '''
+    Returns the proper function to do for the pytube object
+    '''
+    return do[yt]
+
 
 def wrap_url(url: str, object: Union[YouTube, Channel, Playlist]) -> Union[YouTube, Channel, Playlist]:
     '''
@@ -102,15 +107,18 @@ def get_url(yt: Union[YouTube, Channel, Playlist]) -> str:
         logging.error(f"Failed to get url for {yt}")
         return None
 
-def get_children(yt: Union[Channel, Playlist]) -> List[str]:
+def get_children(yt: Union[Channel, Playlist]) -> list[str]:
     '''
     Takes either a Channel or Playlist object and returns the video links inside it as a list of strings
     '''
     if isinstance(yt, Channel):
-        logging.info(f"Getting children for {yt.vanity_url}")
-        return [url for url in yt.video_urls]
+        logging.debug(f"Getting children for {yt.vanity_url}")
+        children = [get_id(get_pytube(url)) for url in yt.video_urls]  # Will need to simplify this later on 
+        return children
     elif isinstance(yt, Playlist):
-        return [url for url in yt.video_urls]
+        logging.debug(f"Getting children for {yt.title}")
+        children = [get_id(get_pytube(url)) for url in yt.video_urls]  # Will definitely wrap this in a function later on
+        return children
     else: 
         return None
 
@@ -125,7 +133,7 @@ def is_available(yt: YouTube) -> bool:
         return False
 
 
-def get_keys(yt: Union[Channel, Playlist, YouTube]) -> Dict:
+def get_keys(yt: Union[Channel, Playlist, YouTube]) -> dict:
     '''
     Gets the keys that we want to put into the database and returns as a dictionary
     '''
@@ -148,8 +156,8 @@ def get_keys(yt: Union[Channel, Playlist, YouTube]) -> Dict:
                                             # If there is a parent, we will add it later
         keys["available"] = is_available(yt)
         keys["path"] = helper.calculate_path(yt)
-        keys["captions"] = configurer.get_captions()    # Get the captions we want to download for this video
-        keys["filename"] = helper.calculate_filename()
+        keys["captions"] = configurer.get_captions("")    # Get the captions we want to download for this video
+        keys["filename"] = helper.calculate_filename(yt)
 
         return keys
     else: 

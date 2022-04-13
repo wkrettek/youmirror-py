@@ -101,16 +101,15 @@ class YouMirror:
         path = Path(root)
         # Config setup
         config_path = helper.get_path(root, self.config_file)   # Get the config file & ensure it exists
-        db_path = helper.get_path(root, self.db)
+        db_path = helper.get_path(root, self.db)                # Get the db file & ensure it exists
         if not helper.verify_config(config_path):               # Verify the config file   
             logging.error(f'Could not find config file in root directory \'{path}\'')
             return 
         self.from_toml(config_path)             # Build our class from the config file
 
         # Parse the url & create pytube object
-        type = parser.check_link(url)           # Get the url type (channel, playlist, single)
-        # TODO                                  # Verify the url is valid
-        yt = parser.get_pytube(url, type)       # Get the proper pytube object
+        url_type = parser.link_type(url)        # Get the url type (channel, playlist, single)
+        yt = parser.get_pytube(url)             # Get the proper pytube object
 
         # Collect the specs
         try:
@@ -122,21 +121,29 @@ class YouMirror:
         specs = {"name": name, "url": url, "type": type}
         
         # Add the id to the config
-        to_add = list(Union[Channel, Playlist, YouTube])
-        if configurer.id_exists(id, type, self.config):
+        to_add: list[Union[Channel, Playlist, YouTube]] = []      # Create list of items to add
+        if configurer.id_exists(id, url_type, self.config):
             logging.info(f"{url} already exists in the mirror")
         else:
             logging.info(f"Adding {url} to the mirror")
             configurer.add_item(id, specs, self.config)            # Add the url to the config
             to_add.append(yt)                                      # Mark it for adding
 
-        # Add to the database
+        # Open the database
         channels_table = SqliteDict(db_path, tablename="channels", autocommit=True)
         playlists_table = SqliteDict(db_path, tablename="playlists", autocommit=True)
         singles_table = SqliteDict(db_path, tablename="singles", autocommit=True)
 
         # Build necessary info
         keys = parser.get_keys(yt)
+        
+        # Add to the database
+        if type(yt) == Channel:
+            channels_table[id] = keys
+        elif type(yt) == Playlist:
+            playlists_table[id] = keys
+        elif type(yt) == YouTube:
+            singles_table[id] = keys
             # Channels
                 # id
                 # name
@@ -156,9 +163,6 @@ class YouMirror:
                 # available
                 # path
                 # captions
-        
-
-        helper.calculate_filepath(yt)
 
         # If downloading is enabled, download the video(s)
             # If not force, report how much downloading there is to do
@@ -187,9 +191,9 @@ class YouMirror:
         self.from_toml(config_path)             # Build our class from the config file
 
         # Parse the url & create pytube object
-        type = parser.check_link(url)           # Get the url type (channel, playlist, single)
+        url_type = parser.link_type(url)           # Get the url type (channel, playlist, single)
         # TODO                                  # Verify the url is valid
-        yt = parser.get_pytube(url, type)       # Get the proper pytube object
+        yt = parser.get_pytube(url)       # Get the proper pytube object
 
         # Collect the specs
         try:
@@ -200,7 +204,7 @@ class YouMirror:
             logging.exception(f"Failed to collect specs from url error: {e}")
 
         # Check if the id is already in the config
-        if configurer.id_exists(id, type, self.config):
+        if configurer.id_exists(id, url_type, self.config):
             logging.info(f"Removing {url} from the mirror")
             # Remove the url from the config
             configurer.remove_item(id, self.config)
