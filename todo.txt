@@ -14,6 +14,8 @@ Databaser
     Used for the more complex db operations (if necessary)
         It will use the sqlite3 library
             Otherwise, sqlitedict is good enough for the core
+Configurer
+    These functions need to be made more functional. Don't pass the global object to be modified
 remove()
     Have it do basically the same thing as add, except it removes
 Downloader

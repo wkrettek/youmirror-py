@@ -2,6 +2,7 @@ import youmirror.parser as parser
 import youmirror.downloader as downloader
 import youmirror.helper as helper
 import youmirror.configurer as configurer
+import datetime
 import logging
 from typing import Optional
 from urllib import parse
@@ -10,6 +11,7 @@ import toml
 from pytube import YouTube, Channel, Playlist
 from pathlib import Path    # Helpful for ensuring text values translate well to real directories
 from tqdm import tqdm
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -74,6 +76,8 @@ class YouMirror:
             # Fill out the config file with a template
             try:
                 from youmirror.template import template
+                template["name"] = root
+                template["last_updated"] = datetime.datetime.now().strftime('%Y-%m-%d')
                 config_path.open(mode = "w").write(toml.dumps(template))
             except Exception as e:
                 print(f"Failed to create new config file due to {e}")
@@ -99,8 +103,7 @@ class YouMirror:
         config_path = helper.get_path(root, self.config_file)   # Get the config file & ensure it exists
         if not helper.verify_config(config_path):               # Verify the config file   
             logging.error(f'Could not find config file in root directory \'{path}\'')
-            return
-        # TODO                                  # Verify the config      
+            return 
         self.from_toml(config_path)             # Build our class from the config file
 
         # Parse the url & create pytube object
@@ -117,16 +120,17 @@ class YouMirror:
             logging.exception(f"Failed to collect specs from url error: {e}")
         specs = {"name": name, "url": url, "type": type}
         
-        # Check if the id is already in the config
+        # Add the id to the config
         if configurer.id_exists(id, type, self.config):
             logging.info(f"{url} already exists in the mirror")
         else:
             logging.info(f"Adding {url} to the mirror")
-            # Add the url to the config
-            print("Adding url to config")
-            configurer.add_item(id, specs, self.config)
+            configurer.add_item(id, specs, self.config)            # Add the url to the config
             # Mark it for downloading
+
         # If downloading is enabled, download the video(s)
+            # If not force, report how much downloading there is to do
+
         # Update config file
         self.to_toml(config_path)
 
@@ -134,18 +138,45 @@ class YouMirror:
     def remove(
         self,
         url: str,
-        root: str
+        root: str = None,
+        **kwargs
         ) -> None:
         """
         Removes the following url from the mirror and deletes the video(s)
         """
+        if not root:
+            root = self.root
+        path = Path(root)
         # Config setup
         config_path = helper.get_path(root, self.config_file)   # Get the config file & ensure it exists
         if not helper.verify_config(config_path):               # Verify the config file   
             logging.error(f'Could not find config file in root directory \'{config_path}\'')
-            return
-        # TODO                                  # Verify the config      
+            return     
         self.from_toml(config_path)             # Build our class from the config file
+
+        # Parse the url & create pytube object
+        type = parser.check_link(url)           # Get the url type (channel, playlist, single)
+        # TODO                                  # Verify the url is valid
+        yt = parser.get_pytube(url, type)       # Get the proper pytube object
+
+        # Collect the specs
+        try:
+            id = parser.get_id(yt)                  # Get the id of the pytube object
+            # name = parser.get_name(yt)              # Get the name of the pytube object
+            # url = parser.get_url(yt)                # Get the url of the pytube object
+        except Exception as e:
+            logging.exception(f"Failed to collect specs from url error: {e}")
+
+        # Check if the id is already in the config
+        if configurer.id_exists(id, type, self.config):
+            logging.info(f"Removing {url} from the mirror")
+            # Remove the url from the config
+            configurer.remove_item(id, self.config)
+        else:
+            logging.info(f"{url} not found in the mirror")
+
+        # Update config file
+        self.to_toml(config_path)
 
     
     def sync(

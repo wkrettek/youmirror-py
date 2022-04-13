@@ -27,3 +27,15 @@ def add_item(id: str, specs: dict, config: dict) -> None:
         singles = config["singles"]
         singles[id] = specs
     return
+
+def remove_item(id: str, config: dict) -> None:
+    '''
+    Removes the url from the config
+    '''
+    if id in config["channels"]:
+        del config["channels"][id]
+    elif id in config["playlists"]:
+        del config["playlists"][id]
+    elif id in config["singles"]:
+        del config["singles"][id]
+    return
