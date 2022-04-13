@@ -5,6 +5,10 @@ __all__ = [""]
 from pathlib import Path
 import logging
 import sys
+from pytube import Channel, Playlist, YouTube
+from typing import Union
+
+from youmirror.core import YouMirror
 
 
 def get_path(path : str, filename : str) -> Path:
@@ -59,3 +63,30 @@ def verify_config(filepath: Path) -> Path:
         return filepath
     else:
         return None
+
+# TODO
+def calculate_path(yt: Union[Channel, Playlist, YouTube]) -> Path:
+    '''
+    Calculates the filepath for the given object
+    '''
+
+    return ""
+
+# TODO
+def resolve_collision(yt: YouTube, filename: Path) -> Path:
+    '''
+    Changes the filename if one already exists with the same name
+    '''
+    return ''
+
+# TODO
+def calculate_filename(yt: YouTube):
+    '''
+    Determines the filename from the youtube object
+        Must handle collision
+    '''
+    try:
+        stream = 
+        filename = Path(yt.)
+        filename = resolve_collision(yt, filename)
+    return ''

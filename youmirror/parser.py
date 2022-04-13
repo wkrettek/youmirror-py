@@ -1,6 +1,8 @@
 # This file will parse information from youtube urls and deal with pytube objects
 from pytube import YouTube, Channel, Playlist
-from typing import Union
+from typing import Union, List, Dict
+import youmirror.helper as helper
+import youmirror.configurer as configurer
 import logging
 import sys
 types = {"channel", "playlist", "video"}
@@ -98,4 +100,57 @@ def get_url(yt: Union[YouTube, Channel, Playlist]) -> str:
         return yt.playlist_url
     else:
         logging.error(f"Failed to get url for {yt}")
+        return None
+
+def get_children(yt: Union[Channel, Playlist]) -> List[str]:
+    '''
+    Takes either a Channel or Playlist object and returns the video links inside it as a list of strings
+    '''
+    if isinstance(yt, Channel):
+        logging.info(f"Getting children for {yt.vanity_url}")
+        return [url for url in yt.video_urls]
+    elif isinstance(yt, Playlist):
+        return [url for url in yt.video_urls]
+    else: 
+        return None
+
+def is_available(yt: YouTube) -> bool:
+    '''
+    Returns whether a given pytube object is available
+    '''
+    try:
+        yt.check_availability()
+        return True
+    except Exception as e:
+        return False
+
+
+def get_keys(yt: Union[Channel, Playlist, YouTube]) -> Dict:
+    '''
+    Gets the keys that we want to put into the database and returns as a dictionary
+    '''
+    keys = dict()
+    if isinstance(yt, Channel):
+        keys["name"] = yt.channel_name
+        keys["children"] = get_children(yt)
+        keys["available"] = True            # We will add a check later to determine this
+        keys["path"] = helper.calculate_path(yt)
+        return keys
+    elif isinstance(yt, Playlist):
+        keys["name"] = yt.title
+        keys["children"] = get_children(yt)
+        keys["available"] = True            # We will add a check later to determine this
+        keys["path"] = helper.calculate_path(yt)
+        return keys
+    elif isinstance(yt, YouTube):
+        keys["name"] = yt.title
+        keys["parent"] = None               # Singles will only get here if there is no parent
+                                            # If there is a parent, we will add it later
+        keys["available"] = is_available(yt)
+        keys["path"] = helper.calculate_path(yt)
+        keys["captions"] = configurer.get_captions()    # Get the captions we want to download for this video
+        keys["filename"] = helper.calculate_filename()
+
+        return keys
+    else: 
         return None

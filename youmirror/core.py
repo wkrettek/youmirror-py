@@ -4,7 +4,7 @@ import youmirror.helper as helper
 import youmirror.configurer as configurer
 import datetime
 import logging
-from typing import Optional
+from typing import Optional, Union
 from urllib import parse
 from sqlitedict import SqliteDict
 import toml
@@ -101,6 +101,7 @@ class YouMirror:
         path = Path(root)
         # Config setup
         config_path = helper.get_path(root, self.config_file)   # Get the config file & ensure it exists
+        db_path = helper.get_path(root, self.db)
         if not helper.verify_config(config_path):               # Verify the config file   
             logging.error(f'Could not find config file in root directory \'{path}\'')
             return 
@@ -121,12 +122,43 @@ class YouMirror:
         specs = {"name": name, "url": url, "type": type}
         
         # Add the id to the config
+        to_add = list(Union[Channel, Playlist, YouTube])
         if configurer.id_exists(id, type, self.config):
             logging.info(f"{url} already exists in the mirror")
         else:
             logging.info(f"Adding {url} to the mirror")
             configurer.add_item(id, specs, self.config)            # Add the url to the config
-            # Mark it for downloading
+            to_add.append(yt)                                      # Mark it for adding
+
+        # Add to the database
+        channels_table = SqliteDict(db_path, tablename="channels", autocommit=True)
+        playlists_table = SqliteDict(db_path, tablename="playlists", autocommit=True)
+        singles_table = SqliteDict(db_path, tablename="singles", autocommit=True)
+
+        # Build necessary info
+        keys = parser.get_keys(yt)
+            # Channels
+                # id
+                # name
+                # children
+                # available
+                # path
+            # Playlists
+                # id
+                # name
+                # children
+                # available
+                # path
+            # Singles
+                # id
+                # name
+                # parent
+                # available
+                # path
+                # captions
+        
+
+        helper.calculate_filepath(yt)
 
         # If downloading is enabled, download the video(s)
             # If not force, report how much downloading there is to do

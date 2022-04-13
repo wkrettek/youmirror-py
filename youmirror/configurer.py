@@ -39,3 +39,12 @@ def remove_item(id: str, config: dict) -> None:
     elif id in config["singles"]:
         del config["singles"][id]
     return
+
+def get_captions(id: str) -> str:
+    '''
+    Returns what captions to download for the given id
+    '''
+    # Get the list from the config
+    # Take the list and join with spaces
+    # Return string
+    return ''
