@@ -104,7 +104,7 @@ class YouMirror:
         db_path = helper.get_path(root, self.db)                # Get the db file & ensure it exists
         if not helper.verify_config(config_path):               # Verify the config file   
             logging.error(f'Could not find config file in root directory \'{path}\'')
-            return 
+            return
         self.from_toml(config_path)             # Build our class from the config file
 
         # Parse the url & create pytube object
@@ -118,7 +118,7 @@ class YouMirror:
             url = parser.get_url(yt)                # Get the url of the pytube object
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
-        specs = {"name": name, "url": url, "type": type}
+        specs = {"name": name, "url": url, "type": url_type}
         
         # Add the id to the config
         to_add: list[Union[Channel, Playlist, YouTube]] = []      # Create list of items to add

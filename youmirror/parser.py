@@ -140,13 +140,13 @@ def get_keys(yt: Union[Channel, Playlist, YouTube]) -> dict:
     keys = dict()
     if isinstance(yt, Channel):
         keys["name"] = yt.channel_name
-        keys["children"] = get_children(yt)
+        keys["children"] = " ".join(get_children(yt))
         keys["available"] = True            # We will add a check later to determine this
         keys["path"] = helper.calculate_path(yt)
         return keys
     elif isinstance(yt, Playlist):
         keys["name"] = yt.title
-        keys["children"] = get_children(yt)
+        keys["children"] = " ".join(get_children(yt))
         keys["available"] = True            # We will add a check later to determine this
         keys["path"] = helper.calculate_path(yt)
         return keys

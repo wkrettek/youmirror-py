@@ -1,7 +1,8 @@
 __all__ = [""]
 
-# This file interfaces with the file system
+# This module manages the file tree
 
+import youmirror.parser as parser
 from pathlib import Path
 import logging
 import sys
@@ -62,13 +63,36 @@ def verify_config(filepath: Path) -> Path:
     else:
         return None
 
-# TODO
 def calculate_path(yt: Union[Channel, Playlist, YouTube]) -> Path:
     '''
-    Calculates the filepath for the given object
+    Calculates the filepath for the given object.
+    Root
+      | -- channels
+              | -- channel name
+                        | -- videos
+                        | -- captions
+                        | -- audio
+                        | -- thumbnails
+      | -- playlists
+              | -- playlist name
+                        | -- videos
+                        | -- captions
+                        | -- audio
+                        | -- thumbnails
+      | -- singles
+              | -- single name
+                        | -- videos
+                        | -- captions
+                        | -- audio
+                        | -- thumbnails
     '''
-
-    return ""
+    path_dict = {Channel: "channels", Playlist: "playlists", YouTube: "singles"}    # Dict to sort from object to path
+    print("Type = ", type(yt))
+    path = Path(path_dict[type(yt)])            # The object type will inform us where to sort it
+    print("Path = ", path)
+    pathname = path/Path(parser.get_name(yt))   # Add the channel/playlist/single's name to the path
+    # Resolve collision, need to add some handling here in case we want to overwrite
+    return "str(pathname)"
 
 # TODO
 def resolve_collision(yt: YouTube, filename: Path) -> Path:
