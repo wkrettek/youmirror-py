@@ -1,7 +1,5 @@
 {
-    "root": "./demo/",
     "default_resolution": "best",
-    "match_delete": "false",
     "captions":
     [
         "en",

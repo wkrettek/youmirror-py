@@ -8,7 +8,7 @@ import logging
 import sqlite3
 from urllib import parse
 from sqlitedict import SqliteDict
-import ujson
+import toml
 from pytube import YouTube, Channel, Playlist
 from pathlib import Path    # Helpful for ensuring text values translate well to real directories
 from tqdm import tqdm
@@ -24,50 +24,32 @@ class YouMirror:
         ) -> None:
         self.root = root
         self.db = 'youmirror.db'
-        self.dbpath = self.root + self.db
-        self.config_file = 'youmirror.json'
-        self.configpath = self.root + self.db
-        self.channels = list()
-        self.playlists = list()
-        self.singles = list()
+        self.config_file = 'youmirror.toml'
+        self.config = {}
 
-    def from_json(self, json_file: str) -> None:
+    def from_toml(self, config_file: str) -> None:
         '''
-        Load a json file into the YouMirror object
+        Load a toml file into the YouMirror object
         '''
         try:
-            config = ujson.load(open(json_file))
+            self.config = toml.load(open(config_file))
         except Exception as e:
             logging.exception(f"Could not parse given config file due to {e}")
-        self.root = config['root']
-        self.dbpath = self.root + 'youmirror.db'
-        # Keep track of the urls of all the different types of files
-        # Load all types of mirrables
-        self.channels = config['channels']
-        self.playlists = config['playlists']
-        self.singles = config['singles']
 
-    def to_json(self) -> None:
+    def to_toml(self, config_file: str) -> None:
         """
-        Writes all the values from the YouMirror object into the config file
+        Writes all the values from the YouMirror object into the toml config file
         """
         # Get the config file
-        configpath = self.configpath
-        urls = set()
+
         try:
-            json = ujson.load(open(configpath))
+            filepath = Path(config_file)
+            if filepath.exists():
+                toml_string = toml.dumps(self.config)
+                filepath.open(config_file).write(toml_string)
         except Exception as e:
             print(e)
-        # Collect urls in 
-        for json_channels in json["channels"]:
-            urls.add(json_channels["url"])
-        # Look through channels
-            #
-        # Look through playlists
-        # Look through singles
-
-        pass
-
+            
     # Needs a little work, the root directory string gets printed strangely when filling out the template
     def new(
         self,
@@ -95,7 +77,7 @@ class YouMirror:
             from youmirror.template import template
             path = Path(root)       # Wrap it to ensure it's 
             filepath = path/Path(config_file)
-            filepath.open(mode = "w").write(ujson.dumps(template, indent=4))
+            filepath.open(mode = "w").write(toml.dumps(template, indent=4))
         except Exception as e:
             print(f"Failed to create new config file due to {e}")
 
@@ -103,15 +85,24 @@ class YouMirror:
         self,
         url: str,
         root: str,
-        download: bool = False
+        **kwargs
         ) -> None:
         '''
         Adds the following url to the mirror and downloads the video(s)
         '''
-        config_file = helper.get_config(root)
-        self.from_json(config_file)
-        print(f'channels are {self.channels}')
-        # type = parser.link_type(url)    # Determine the type of the url
+        urls = set()
+        config_file = helper.get_config(root)   # Get the config file & ensure it exists
+        self.from_json(config_file)             # Build our class from the config file
+        type = parser.check_link(url)           # Get the url type (channel, playlist, single)
+        # Update the json
+        if type == 'single':                    
+            for s in self.singles:
+                urls.add(s["url"])
+            if url in urls:
+                print(f'{url} already in singles')
+            else:
+                print(f'{url} is not in singles and will be added')
+        # type = parser.link_type(url)
         # if type == "channel":
         #     self.channels.append(url)
         # elif type == "playlist":
@@ -125,6 +116,9 @@ class YouMirror:
         #     self.sync()
         # print(f"Added {type} to the mirror from {url}")
         # # Do I wanna add to json and then sync? Or 
+        # Update config
+        self.to_json()
+
 
     def remove(
         self,

@@ -1,19 +1,22 @@
-# This file will parse information from YouTube objects
+# This file will parse information from youtube urls
 from pytube import YouTube
 from typing import Dict
 import logging
+import sys
 types = {"channel", "playlist", "video"}
 
-def link_type(url: str) -> str:
+# In the future, this should be two functions, one that returns the type and one that checks if the link is valid. For now, it does both
+def check_link(url: str) -> str:
     if "/user/" in url or "/channel/" in url or '/c/' in url:   # For some reason youtube has really inconsistent urls, so here we are
         return "channel"
     elif "playlist?list" in url:
         return "playlist"
     elif "watch?v=" in url:
-        return "video"
+        return "single"
     else:
-        return "unknown"
-    pass
+        logging.error(f"\'{url}\' is not a valid url")
+        sys.exit()
+        return None
 
 def get_metadata(yt: YouTube) -> Dict:
     print(yt.metadata)
