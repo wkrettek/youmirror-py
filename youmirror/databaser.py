@@ -1,11 +1,20 @@
-# This module creates a database and manages it
+'''
+This module creates a database and manages it
+# TODO 
+I'm not a big fan of sqlite for this and I'd be happy to use something heavier. If I can find a good solution I will likely use that instead.
+I need to abstract the database management as much as possible so it's easy to swap out.
+The earlier we can find the best database the better, 
+because changing databases later on will fuck everybody's archives all up
+'''
 from sqlitedict import SqliteDict
 import logging
 from pathlib import Path
 
+db_file = "youmirror.db"
+
 def get_table(path: Path, table: str) -> SqliteDict:
     '''
-    Returns a table from the database matching the string
+    Returns a table from the database that matches the string
     '''
     valid_tables = {"channels", "playlists", "singles"}
     if table in valid_tables:

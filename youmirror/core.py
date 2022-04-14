@@ -24,8 +24,8 @@ class YouMirror:
         root : str = ".",
         ) -> None:
         self.root = root
-        self.db = 'youmirror.db'
-        self.config_file = 'youmirror.toml'
+        self.db: str = databaser.db_file
+        self.config_file: str = configurer.config_file
         self.config = dict()
 
     def from_toml(self, config_file: Path) -> None:
@@ -61,7 +61,7 @@ class YouMirror:
         Create a new mirror directory at the given path
         '''
 
-        # Get our wrapped up Path objects
+        # Get our wrapped up Paths
         path = Path(root)
         config_path = helper.get_path(root, self.config_file)
         db_path = helper.get_path(root, self.db)
@@ -71,20 +71,13 @@ class YouMirror:
             logging.info(f"Creating new mirror directory \'{path}\'")
             helper.create_path(path)                                    # If it doesn't, create it
         # Maybe put an 'already exists' message here? (for all of them)
-        if not helper.file_exists(config_path):                   # Check if the config file exists
+        if not helper.file_exists(config_path):                         # Check if the config file exists
             logging.info(f"Creating config file \'{config_path}\'")
-            helper.create_file(config_path)                       # If it doesn't, create it
-            # Fill out the config file with a template
-            try:
-                from youmirror.template import template
-                template["name"] = root
-                template["last_updated"] = datetime.datetime.now().strftime('%Y-%m-%d')
-                config_path.open(mode = "w").write(toml.dumps(template))
-            except Exception as e:
-                print(f"Failed to create new config file due to {e}")
-        if not helper.file_exists(db_path):                            # Check if the database exists
+            helper.create_file(config_path)                             # If it doesn't, create it
+
+        if not helper.file_exists(db_path):                             # Check if the database exists
             logging.info(f"Creating database \'{db_path}\'")
-            helper.create_file(db_path)                                # If it doesn't create it
+            helper.create_file(db_path)                                 # If it doesn't create it
 
 
 
@@ -202,6 +195,10 @@ class YouMirror:
             configurer.remove_item(id, self.config)
         else:
             logging.info(f"{url} not found in the mirror")
+
+        # Delete files
+
+        # Clear database
 
         # Update config file
         self.to_toml(config_path)

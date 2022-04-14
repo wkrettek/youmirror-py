@@ -1,11 +1,58 @@
 __all__ = [""]
 
-# This module manages the file tree
+'''
+This module manages the filetree
+# TODO
+I am deciding between two filetree implementations
+Root
+    | -- channels
+            | -- channel name
+                    | -- videos
+                    | -- captions
+                    | -- audio
+                    | -- thumbnails
+    | -- playlists
+            | -- playlist name
+                    | -- videos
+                    | -- captions
+                    | -- audio
+                    | -- thumbnails
+    | -- singles
+            | -- videos
+            | -- captions
+            | -- audio
+            | -- thumbnails
+
+----- or -----
+Root
+    | -- videos
+            | -- channels
+            | -- playlists
+            | -- singles
+    | -- captions
+            | -- playlist name
+                    | -- videos
+                    | -- captions
+                    | -- audio
+                    | -- thumbnails
+    | -- audio
+            | -- videos
+            | -- captions
+            | -- audio
+            | -- thumbnails
+    | -- thumbnails
+            | -- videos
+            | -- captions
+            | -- audio
+            | -- thumbnails
+------------------
+The second one is better for the stuff I want to do with this project later on (files of the same type are all under one tree),
+but the first one is better for keeping things more condensed. And if you just download videos, like most people do, you'll just see one folder inside the root, which is always annoying AF to me
+'''
 
 import youmirror.parser as parser
 from pathlib import Path
 import logging
-import sys
 from pytube import Channel, Playlist, YouTube
 from typing import Union
 
