@@ -3,13 +3,63 @@ This module manages the config
 I decided on using toml over json because it's easier to read and edit.
 Ideally this module will abstract the configuration management away from
 the top-level class
+-------
+globals - Toplevel global options AKA YouMirror settings
+yts     - YouTube specific options
+ids     - YouTube specific ids
+
 '''
 import toml
 import logging
 from datetime import datetime
 from pathlib import Path
 
-config_file = "youmirror.toml"
+config_file = "youmirror.toml"                                      # This is the name for the config file to be used
+valid_options = {"youmirror", "channels", "playlists", "singles"}   # These are the valid global options
+valid_yt = {"channels", "playlists", "singles"}                     # Valid youtube types for the config
+
+def set_options(option: str, config: dict, options: dict) -> dict:
+    '''
+    Sets the options for the given config parameter
+    '''
+
+    if option in valid_options:
+        config[option] = options
+        return config
+    else:
+        logging.info("Invalid id {id}")
+        return None
+    
+# TODO
+# This can be refactored to utilize one of the other functions but to be totally honest I'm not sure how to do it
+# channel, channel_id, config, dict of settings
+def set_yt(yt: str, id: str, config: dict,  options: dict) -> dict:
+    '''
+    Sets the options for the given id
+    '''
+    if yt in valid_yt:
+        config[yt][id] = options
+        return options
+    else:
+        logging.error("Invalid youtube type {yt}")
+        return None
+
+def get_yt(yt: str, id: str, config: dict) -> dict:
+    '''
+    Sets the options for the given id
+    '''
+    if yt in valid_yt and yt_exists(yt, id, config):    # If we are checking
+        return config[yt][id]
+    else:
+        logging.error("Invalid youtube type {yt} or {id} does not exists")
+        return None
+
+def yt_exists(id: str, yt: str, config: dict) -> bool:
+    '''
+    Checks if the url exists
+    '''
+    if yt in valid_yt:
+        return id in config[yt]
 
 def load_config(config_path: str) -> dict:
     '''
@@ -28,7 +78,7 @@ def save_config(config_path: Path, config: dict) -> Path:
     try:
         if config_path.is_file():                      # Check if the file exists     
             toml_string = toml.dumps(config)           # Convert the config to a toml string
-            print("New config: \n" + toml_string)      # Print the new config
+            print("New config: \n" + toml_string)      # Print the new config ----- Remove later
             config_path.open('w').write(toml_string)   # Write the toml string to the config file
         else:
             return None
@@ -42,25 +92,43 @@ def new_config(config_path: Path, root: str) -> Path:
     '''
     # Fill out the config file with a template
     try:
-        from youmirror.template import template         # Import the template dictionary
-        template["name"] = root                         # Set the name to the new mirror's root
-        template["created"] = datetime.datetime.now().strftime('%Y-%m-%d') # Mark the creation date
-        save_config(config_path, template)              # Save the config
+        if not config_path.is_file():                       # Only if there isn't one already
+            config_path.open(mode = "w")                    # Create the file
+            from youmirror.template import template         # Import the template dictionary
+            name = root                                     # Set the name to the new mirror's root
+            created_at = datetime.now().strftime('%Y-%m-%d')# Mark the creation date
+            d = {"name": name, "created_at": created_at}    # New options
+            set_options("youmirror", template, d)           # Save the additional options            
+            return save_config(config_path, template)       # Save the config
+        else:
+            logging.info('Config file {config_path} already exists')
+            return None
     except Exception as e:
         logging.exception(f"Failed to create new config file due to {e}")
         return None
 
-def id_exists(id: str, type: str, config: dict) -> bool:
+# TODO if yt doesn't exists, set it
+def add_yt(yt: str, id: str, config: dict, options: dict) -> dict:
     '''
-    Checks if the url exists
+    Adds the yt id to the config
     '''
-    if type == "channel":
-        return id in config["channels"]
-    elif type == "playlist":
-        return id in config["playlists"]
-    elif type == "single":
-        return id in config["singles"]
-    return False
+    if yt in valid_yt:
+        config[yt][id] = options
+        return options
+    else:
+        logging.error("Invalid youtube type {yt}")
+        return None
+
+# TODO if yt does exist, remove it
+def remove_yt(yt: str, id: str, config: dict) -> None:
+    '''
+    Removes yt id from the config
+    '''
+    if yt in valid_yt:
+        del config[yt][id]
+    else:
+        logging.error("Invalid youtube type {yt}")
+    return
 
 def add_item(id: str, specs: dict, config: dict) -> None:
     '''
@@ -88,22 +156,6 @@ def remove_item(id: str, config: dict) -> None:
         del config["playlists"][id]
     elif id in config["singles"]:
         del config["singles"][id]
-    return
-
-def get_captions(id: str) -> str:
-    '''
-    Returns what captions to download for the given id
-    '''
-    # Get the list from the config
-    # Take the list and join with spaces
-    # Return string
-    return ''
-
-def set_global_options(config: dict, options: dict) -> None:
-    '''
-    Sets the global options
-    '''
-    # TODO
     return
 
 
