@@ -4,7 +4,8 @@ from typing import Union, Callable, Any
 import youmirror.helper as helper
 import youmirror.configurer as configurer
 import logging
-import sys
+
+yt_type_to_yt_string = {Channel: "channel", Playlist: "playlist", YouTube: "single"}    # Translation dict for convenience
 
 def link_type(url: str) -> str:
     '''
@@ -13,9 +14,9 @@ def link_type(url: str) -> str:
     channel_strings = {'/user/', '/channel/', '/c/'}        # Possible strings for a channel
     if any(string in url for string in channel_strings):    # For some reason youtube has really inconsistent urls, so here we are
         return "channel"
-    elif "playlist?list" in url:
+    elif "playlist?list" in url:                            # String to check for a playlist
         return "playlist"
-    elif "watch?v=" in url:
+    elif "watch?v=" in url:                                 # String to check for a video
         return "single"
     else:
         logging.error(f"\'{url}\' is not a valid url")
@@ -53,7 +54,6 @@ def resolve_pytube(yt: Union[Channel, Playlist, YouTube], do: dict[Any: Callable
     Returns the proper function to do for the pytube object
     '''
     return do[yt]
-
 
 def wrap_url(url: str, object: Union[YouTube, Channel, Playlist]) -> Union[YouTube, Channel, Playlist]:
     '''

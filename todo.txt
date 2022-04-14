@@ -1,27 +1,17 @@
-Core
-    Envelope some of the code into functions elsewhere
-    We should probably wrap the objects sooner
 Parser
-    Make it clearer when the pytube objects are what they are
-    Parse the object type early on and send it down the right path
     Be able to rip all the metadata
         -Somehow rip just enough not to cause any errors.. I guess just skip metadata we can't get that's not crucial
 Helper
     Can I rename this thing??
-    Will have to build the filepath
-        Have to resolve somehow if there is a naming conflict... Honestly do not freaking know how. I want it to be something simple that is unobtrusive to understanding it.. And even more ideally than that.... was obviously resolved by youmirror and can be removed if need be
+    Have to resolve somehow if there is a naming conflict... Honestly do not freaking know how. I want it to be something simple that is unobtrusive to understanding it.. And even more ideally than that.... was obviously resolved by youmirror and can be removed if need be
 Databaser
     Used for the more complex db operations (if necessary)
-        It will use the sqlite3 library
-            Otherwise, sqlitedict is good enough for the core
-Configurer
-    These functions need to be made more functional. Don't pass the global object to be modified
-remove()
-    Have it do basically the same thing as add, except it removes
+        using sqlitedict for now
 Downloader
+    Calculate all the filepaths before hand, only download at the very end
     Should be very specific
         You only pass video objects when you're ready to download
         Somehow have to be able to pass all the different specifiers
 
-Can we just talk about how sexy the toml is for this project?????? It looks sooooooooo good. I was creaming my pants about it for so damn long. It's so sexy
+
             

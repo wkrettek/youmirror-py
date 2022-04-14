@@ -2,8 +2,14 @@ __all__ = [""]
 
 '''
 This module manages the filetree
+------
+This is the second most important module in the project, it must be able to 
+generate the paths and filenames that make up the project with the given options
+and resolve any naming conflicts. Thankfully, we can do most of our work with just
+pathlib and some crafty organization
 # TODO
 I am deciding between two filetree implementations
+Let's call this the 'tall' implementation
    Root
     | -- channels
             | -- channel name
@@ -24,10 +30,13 @@ I am deciding between two filetree implementations
             | -- thumbnails
 
 ----- or -----
+Lets' call this the 'wide' implementation
    Root
     | -- videos
             | -- channels
+                    | -- channel name
             | -- playlists
+                    | -- playlist name
             | -- singles
     | -- captions
             | -- channels
@@ -44,6 +53,8 @@ I am deciding between two filetree implementations
 ------------------
 The second one is better for the stuff I want to do with this project later on (files of the same type are all under one tree),
 but the first one is better for keeping things more condensed. And if you just download videos, like most people do, you'll just see one folder inside the root, which is always annoying AF to me
+------------------
+I think I can implement an "export" command later on to use the db to export things that are grouped together. Sucks if your db gets corrupted, but oh well
 '''
 
 import youmirror.parser as parser
@@ -108,26 +119,12 @@ def verify_config(filepath: Path) -> Path:
 
 def calculate_path(yt: Union[Channel, Playlist, YouTube]) -> str:
     '''
-    Calculates the filepath for the given pytube object.
-    Root
-      | -- channels
-              | -- channel name
-                        | -- videos
-                        | -- captions
-                        | -- audio
-                        | -- thumbnails
-      | -- playlists
-              | -- playlist name
-                        | -- videos
-                        | -- captions
-                        | -- audio
-                        | -- thumbnails
-      | -- singles
-              | -- videos
-              | -- captions
-              | -- audio
-              | -- thumbnails
+    Calculates the filepath for the given database settings
+    wide formula = /file_type/parent_type/parent_name
+    tall formula = /parent_type/parent_name/file_type
     '''
+    file_types = {"videos", "captions", "audio", "thumbnails"}  # Valid file types
+    parent_types = {"channels", "playlists", "singles"}
     path_dict = {Channel: "channels", Playlist: "playlists", YouTube: "singles"}    # Dict to sort from object to path
     object_type = type(yt)                          # Get the type of pytube object
     pathname = Path(path_dict[object_type])         # The object type will inform us where to sort it
@@ -151,7 +148,7 @@ def resolve_collision(yt: YouTube, filename: Path) -> Path:
 def calculate_filename(yt: YouTube) -> str:
     '''
     Determines the filename from the youtube object
-        Must handle collision
+    Must handle collision
     '''
     try:
         filename = yt.title
@@ -160,9 +157,15 @@ def calculate_filename(yt: YouTube) -> str:
     except Exception as e:
         return None
 
-def verify_installation():
+def verify_installation(filepath: Path) -> bool:
     '''
     Take a database entry and verify that it is fully installed
     '''
-    pass
+    logging.info(f"Checking if file {filepath}")
+    if filepath.is_file():
+        logging.info(f"File {filepath} is installed")
+        return True
+    else:
+        logging.info(f"File {filepath} is not installed")
+    return False
 

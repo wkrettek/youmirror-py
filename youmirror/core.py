@@ -1,3 +1,4 @@
+from distutils.command.config import config
 import youmirror.parser as parser
 import youmirror.downloader as downloader
 import youmirror.helper as helper
@@ -14,6 +15,10 @@ from tqdm import tqdm       # Progress bar
 
 
 logging.basicConfig(level=logging.INFO)
+defaults = {                # These are the default global configs if not specified
+    "filetree": "wide",     # This sets the filetree type
+    "resolution": "best"
+    }
 
 # This is the main class for maintaining a youmirror
 class YouMirror:
@@ -280,30 +285,3 @@ class YouMirror:
         Prints the current state of the mirror
         '''
         pass
-
-
-# Must be inside root directory:
-    # Config file
-    # Database file
-
-# I'd like to make download_single robust and have the other two call on it I think
-# Database name should be youmirror.db
-# | -- root
-#       youmirror.json
-#       youmirror.db
-#       | -- channels
-#               | -- channel name
-#                       | -- videos
-#                       | -- captions
-#                       | -- audio
-#       | -- playlists
-#              | -- playlist name
-#                       | -- videos
-#                       | -- captions
-#                       | -- audio
-#       | -- singles   
-#              | -- videos
-#              | -- captions
-#              | -- audio
-#
-#
