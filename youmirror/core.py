@@ -3,15 +3,14 @@ import youmirror.downloader as downloader
 import youmirror.helper as helper
 import youmirror.configurer as configurer
 import youmirror.databaser as databaser
-import datetime
 import logging
 from typing import Optional, Union
 from urllib import parse
 from sqlitedict import SqliteDict
 import toml
 from pytube import YouTube, Channel, Playlist
-from pathlib import Path    # Helpful for ensuring text values translate well to real directories
-from tqdm import tqdm
+from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
+from tqdm import tqdm       # Progress bar
 
 
 logging.basicConfig(level=logging.INFO)
@@ -28,6 +27,7 @@ class YouMirror:
         self.config_file: str = configurer.config_file
         self.config = dict()
 
+    # TODO remove this safely
     def from_toml(self, config_file: Path) -> None:
         '''
         Load a toml file into the YouMirror object
@@ -37,11 +37,11 @@ class YouMirror:
         except Exception as e:
             logging.exception(f"Could not parse given config file due to {e}")
 
+    # TODO remove this safely
     def to_toml(self, config_file: str) -> None:
         """
         Writes all the values from the YouMirror object into the toml config file
         """
-        # Get the config file
 
         try:
             path = Path(self.root)
@@ -49,7 +49,7 @@ class YouMirror:
             if filepath.exists():                               # Check if the file exists     
                 toml_string = toml.dumps(self.config)           # Convert the config to a toml string
                 print("New config: \n" + toml_string)           # Print the new config
-                filepath.open('w').write(toml_string)   # Write the toml string to the config file
+                filepath.open('w').write(toml_string)           # Write the toml string to the config file
         except Exception as e:
             print(e)
             
@@ -99,11 +99,19 @@ class YouMirror:
         if not helper.verify_config(config_path):               # Verify the config file   
             logging.error(f'Could not find config file in root directory \'{path}\'')
             return
-        self.from_toml(config_path)             # Build our class from the config file
+        # self.from_toml(config_path)             # Build our class from the config file
+        # Load the config
+        try:
+            self.config = configurer.load_config(config_path)
+        except Exception as e:
+            logging.exception(f"Could not load given config file due to {e}")
 
         # Parse the url & create pytube object
-        url_type = parser.link_type(url)        # Get the url type (channel, playlist, single)
-        yt = parser.get_pytube(url)             # Get the proper pytube object
+        try:
+            url_type = parser.link_type(url)        # Get the url type (channel, playlist, single)
+            yt = parser.get_pytube(url)             # Get the proper pytube object
+        except Exception as e:
+            logging.exception(f"Could not parse url {url} due to {e}")
 
         # Collect the specs
         try:
@@ -115,13 +123,16 @@ class YouMirror:
         specs = {"name": name, "url": url, "type": url_type}
         
         # Add the id to the config
-        to_add: list[Union[Channel, Playlist, YouTube]] = []      # Create list of items to add
-        if configurer.id_exists(id, url_type, self.config):
+        yt_type_to_string = {Channel: "channels", Playlist: "playlists", YouTube: "singles"}   # Translation dict to interface with config
+        to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add
+        yt_type = type(yt)                                      # Get the type of the pytube object
+        yt_string = yt_type_to_string[yt_type]                  # Get the string to add to the config
+        if configurer.yt_exists(yt_string, id, self.config):
             logging.info(f"{url} already exists in the mirror")
         else:
             logging.info(f"Adding {url} to the mirror")
-            configurer.add_item(id, specs, self.config)            # Add the url to the config
-            to_add.append(yt)                                      # Mark it for adding
+            self.config = configurer.add_yt(yt_string, id, self.config, specs)           # Add the url to the config
+            to_add.append(yt)                                   # Mark it for adding
 
         # Open the database tables
         channels_table = databaser.get_table(db_path, "channels")
@@ -153,7 +164,7 @@ class YouMirror:
             # If not forced, report how much downloading there is to do
 
         # Update config file
-        self.to_toml(config_path)
+        configurer.save_config(config_path, self.config)
 
 
     def remove(

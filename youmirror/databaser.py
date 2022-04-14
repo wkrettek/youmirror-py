@@ -1,7 +1,7 @@
 '''
 This module creates a database and manages it
 # TODO 
-I'm not a big fan of sqlite for this and I'd be happy to use something heavier. If I can find a good solution I will likely use that instead.
+I'm not a big fan of sqlite for this and I'd be happy to use something heavier if it's more robust. If I can find a good solution I will likely use that instead.
 I need to abstract the database management as much as possible so it's easy to swap out.
 The earlier we can find the best database the better, 
 because changing databases later on will fuck everybody's archives all up
