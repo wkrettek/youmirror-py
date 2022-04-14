@@ -1,11 +1,14 @@
-# This file will parse information from youtube urls and deal with pytube objects
+'''
+This module parses youtube urls, wraps them in pytube objects and 
+pulls information from pytube objects
+'''
 from pytube import YouTube, Channel, Playlist
 from typing import Union, Callable, Any
 import youmirror.helper as helper
 import youmirror.configurer as configurer
 import logging
 
-yt_type_to_yt_string = {Channel: "channel", Playlist: "playlist", YouTube: "single"}    # Translation dict for convenience
+yt_type_to_string = {Channel: "channel", Playlist: "playlist", YouTube: "single"}    # Translation dict for convenience
 
 def link_type(url: str) -> str:
     '''

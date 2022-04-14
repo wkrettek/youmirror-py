@@ -60,7 +60,6 @@ I think I can implement an "export" command later on to use the db to export thi
 import youmirror.parser as parser
 from pathlib import Path
 import logging
-from pytube import Channel, Playlist, YouTube
 from typing import Union
 
 
@@ -92,12 +91,6 @@ def create_file(filepath: Path) -> None:
     except Exception as e:
         print(e)
 
-def path_exists(path: Path) -> bool:
-    '''
-    Checks if a path exists
-    '''
-    return path.is_dir()
-
 def create_path(path: Path) -> None:
     '''
     Creates the path 
@@ -108,50 +101,37 @@ def create_path(path: Path) -> None:
     except Exception as e:
         print(e)
 
-def verify_config(filepath: Path) -> Path:
+def calculate_path(file_type: str, parent_type: str, parent_name, yt_id: str) -> str:
     '''
-    Find the config file in the current working directory
-    '''
-    if  filepath.exists():
-        return filepath
-    else:
-        return None
-
-def calculate_path(yt: Union[Channel, Playlist, YouTube]) -> str:
-    '''
-    Calculates the filepath for the given database settings
+    Calculates the filepath from the given database settings and returns a string
     wide formula = /file_type/parent_type/parent_name
     tall formula = /parent_type/parent_name/file_type
     '''
     file_types = {"videos", "captions", "audio", "thumbnails"}  # Valid file types
-    parent_types = {"channels", "playlists", "singles"}
-    path_dict = {Channel: "channels", Playlist: "playlists", YouTube: "singles"}    # Dict to sort from object to path
-    object_type = type(yt)                          # Get the type of pytube object
-    pathname = Path(path_dict[object_type])         # The object type will inform us where to sort it
-    if isinstance(yt, YouTube):                     # If it's a single, stop here
-        return str(pathname)
-    pathname = pathname/Path(parser.get_name(yt))   # Add the channel/playlist's name to the path
-    # Resolve collision, need to add some handling here in case it sees a duplicate and that's okay
-    # I guess if we only do this while adding then it will always be okay, because we catch duplicates before getting to this stage? We won't be calculating the filepath, we'll be checking it against the 
-    return  str(pathname)
+    parent_types = {"channels", "playlists", "singles"}         # Valid parent types
+    path = Path(file_type)/Path(parent_type)/Path(parent_name)  # Build the filepath
+    # TODO Resolve collision, need to add some handling here in case it sees a duplicate
+    # path = resolve_collision(path, yt_id)
+    return  str(path)
 
 # TODO
-def resolve_collision(yt: YouTube, filename: Path) -> Path:
+def resolve_collision(path: Path, yt_id: str) -> Path:
     '''
-    Changes the filename if one already exists with the same name
+    Appends the yt_id if the path already exists
+    This could cause a lot of issues if we're not careful. I think committing
+    all changes to the db at once will solve this
+    ---- This is gonnna be super hard ----
     '''
-    return ''
+    if path.exists():                           # If the path already exists
+        path = Path(str(path) + f'_ym{yt_id}' ) # Append "_ym{yt_id}" to the end of the name 
+    return path
 
-# This can either get the filename from the pytube stream object, or it can generate
-# It itself from the title
-# RESOLUTION: For now we will just use the title until this breaks things
-def calculate_filename(yt: YouTube) -> str:
+def calculate_filename(name: str, extension: str) -> str:
     '''
-    Determines the filename from the youtube object
-    Must handle collision
+    Determines the filename from the name and extension
     '''
     try:
-        filename = yt.title
+        filename = name + extension
         # filename = resolve_collision()
         return filename
     except Exception as e:

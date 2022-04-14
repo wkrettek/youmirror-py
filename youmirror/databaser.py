@@ -2,9 +2,12 @@
 This module creates a database and manages it
 ----
 I've realized that the database is the most important thing in this whole project. 
-Downloading the files should be super easy given a database. This means the database
-must contain the information necessary to populate the filetree
+With the database, you should be able to rebuild the whole filetree.
+This means it should contain data from both the config file and filetree
 db
+| -- youmirror
+        | -- key: primary key (can be whatever)
+        | -- List[configs] the rest of the keys are the configs
 | -- channels
         | -- id:        primary key (comes from channel_uri)
         | -- children:  id (primary key for singles)
@@ -25,12 +28,12 @@ db
                 | --    example: ("audio": "/videos/singles/video_name.mp3)
                 | --    example: ("caption": "/videos/singles/video_name.srt)
                 | --    example: ("thumbnail": "/videos/singles/video_name.jpg)
+| --  filetree  We need this to detect collisions, primary key is a path/file
 # TODO 
 I'm not a big fan of sqlite for this and I'd be happy to use something heavier if it's more robust. If I can find a good solution I will likely use that instead.
 I need to abstract the database management as much as possible so it's easy to swap out.
 The earlier we can find the best database the better, 
 because changing databases later on will fuck everybody's archives all up
-
 '''
 from sqlitedict import SqliteDict
 import logging
@@ -44,83 +47,124 @@ def get_table(path: Path, table: str) -> SqliteDict:
     '''
     valid_tables = {"channels", "playlists", "singles"}
     if table in valid_tables:
-        return SqliteDict(path, tablename=table, autocommit=True)   # TODO in the future I would like to 
+        return SqliteDict(path, tablename=table, autocommit=True)   # TODO in the future I would like to wait to commit all at once, but I get concurrency errors without it
     else:
         logging.debug(f"Invalid table {table} given")
         return None
 
 def set_id(table: SqliteDict, id: str, value: dict) -> None:
     '''
-    Sets a row in the given table
+    Sets a row in the given table by id
     '''
     table[id] = value
 
 def get_id(table: SqliteDict, id: str) -> dict:
     '''
-    Gets a row in the given table
+    Gets a row in the given table by id
     '''
     if  id in table:
         return table[id]
     else:
         logging.debug(f"Could not find id {id} in table {table}")
+        return {}
+
+def set_key(table: SqliteDict, id: str, key: str, value: str) -> str:
+    '''
+    Sets the value of the key for the given id
+    '''
+    try:
+        row = get_id(table, id) # Get the row by id
+        row[key] = value
+        set_id(table, id, row)
+        return value
+    except Exception as e:
+        logging.exception(f"Could not set key {key} to value {value} due to {e}")
+
+def get_key(table: SqliteDict, id: str, key: str) -> str:
+    '''
+    Gets the value of the key for the given id
+    '''
+    try:
+        row = get_id(table, id) # Get the row by id
+        if key in row:
+            value = row[key]
+            return value
+        else:
+            logging.debug(f"Could not find key {key} for id {id} in table {table.tablename}")
+            return ""
+    except Exception as e:
+        logging.exception(f"Could not set key {key} in id {id} due to {e}")
         return None
 
+
+
 def set_files(table: SqliteDict, id: str, files: dict) -> dict:
-    pass
+    '''
+    Sets the files dictionary in the id and returns the files that were set
+    
+    '''
+    valid_tables = {"singles"}    # Valid tables that you can set files in
+    if table.tablename in valid_tables:
+        try:
+            row = get_id(table, id) # Retrieve the row
+            row["files"] = files
+            set_id(table, id, row)
+            return files
+        except Exception as e:
+            logging.exception(f"Could not set files {files} in the table {table.tablename} due to {e}")
+            return None
+    else:
+        logging.error(f'Could not set files in invalid table {table.tablename}')
+        return None
 
-def get_files(table: SqliteDict, id: str):
-    pass
+def get_files(table: SqliteDict, id: str) -> dict:
+    '''
+    Gets the files dictionary from the id in the given table
+    '''
+    valid_tables = {"singles"}    # Valid tables that you can request files from
+    if table.tablename in valid_tables:
+        try:
+            row = get_id(table, id)
+            if "files" in row:
+                files = row["files"]
+                return files
+        except Exception as e:
+            logging.exception(f'Could not get files from table {table.tablename} with id {id} due to {e}')
+            return None
+    else:
+        logging.error(f'Could not retrieve files from invalid table {table.tablename}')
+        return None
+
+def set_config(table: SqliteDict, id: str, config: dict) -> dict:
+    '''
+    Sets the config dictionary in the id and returns the config that was set    
+    '''
+    valid_tables = {"channels", "playlists", "singles"}    # Valid tables that you can set the config in
+    if table.tablename in valid_tables:
+        try:
+            row = get_id(table, id) # Retrieve the row
+            row["config"] = config
+            set_id(table, id, row)
+            return config
+        except Exception as e:
+            logging.exception(f"Could not set config {config} in the table {table.tablename} due to {e}")
+            return None
+    else:
+        logging.error(f'Could not set config in invalid table {table.tablename}')
+        return None
 
 
-# def check_entry(conn : Connection, url : str, table: str) -> bool:
-#     '''
-#     Checks if the url is in the database
-#     '''
-#     url = parse.quote_plus(url) # Encode to be safe for sqlite
-#     try:
-#         cursor = conn.cursor()      # Create a cursor
-#         cursor.execute(f"SELECT * FROM {table} ") # Execute the query
-#         value = cursor.fetchall() # Fetch the results
-#         print(value)
-#         if value: # If there is a valid result
-#             return True
-#         else:
-#             return False
-#     except Exception as e:
-#         logging.exception(f"Could not check entry {url} in table {table} due to {e}")
-#         return False
-
-# def add_entry(conn, url : str, table : str):
-#     '''
-#     Adds an entry to the database
-#     '''
-#     url = parse.quote_plus(url) # Encode to be safe for sqlite
-#     try:
-#         cur = conn.cursor()
-#         cur.execute(f"INSERT INTO {table} (url) VALUES ({url})")
-#         logging.info(f"Added entry {url} to table {table}")
-#     except Exception as e:
-#         logging.exception(f"Could not add entry {url} to table {table} due to {e}")
-
-# def table_exists(conn, table : str):
-#     '''
-#     Checks if the table exists
-#     '''
-#     try:
-#         conn.execute(f"SELECT * FROM {table}")
-#         return True
-#     except Exception as e:
-#         logging.exception(f"Table {table} does not exist")
-#         return False
-
-# def create_table(conn, table : str):
-#     '''
-#     Creates a table
-#     '''
-#     try:
-#         conn.execute(f"CREATE TABLE {table} (url TEXT PRIMARY KEY)")
-#         logging.info(f"Created table {table}")
-#     except Exception as e:
-#         logging.exception(f"Could not create table {table} due to {e}")
-#         sys.exit()
-#     pass
+def get_config(table: SqliteDict, id: str) -> dict:
+    valid_tables = {"channels", "playlists", "singles"}    # Valid tables that you can set the config in
+    if table.tablename in valid_tables:
+        try:
+            row = get_id(table, id)
+            if "config" in row:
+                config = row["files"]
+                return config
+        except Exception as e:
+            logging.exception(f'Could not get files from table {table.tablename} with id {id} due to {e}')
+            return None
+    else:
+        logging.error(f'Could not retrieve files from invalid table {table.tablename}')
+        return None

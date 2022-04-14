@@ -15,10 +15,6 @@ from tqdm import tqdm       # Progress bar
 
 
 logging.basicConfig(level=logging.INFO)
-defaults = {                # These are the default global configs if not specified
-    "filetree": "wide",     # This sets the filetree type
-    "resolution": "best"
-    }
 
 # This is the main class for maintaining a youmirror
 class YouMirror:
@@ -95,6 +91,10 @@ class YouMirror:
         '''
         Adds the following url to the mirror and downloads the video(s)
         '''
+        active_options = configurer.defaults                                # Load default options
+        global_options = configurer.get_options("youmirror", self.config)   # Get global options
+        active_options.update(global_options)                               # Overwrite with globals
+        # active_options.update(kwargs)         # Overwrite with command line options
         if not root:
             root = self.root
         path = Path(root)
@@ -154,11 +154,13 @@ class YouMirror:
             print(f"Adding {id} to table {table}")
             table[id] = keys                        # Add the item to the database
             if children := parser.get_children(item):   # If there are any children
-                for child in children: # Process children if the object has them
+                for child in children:              # Process children if the object has them
+
                     parent_id = parser.get_id(item)     # Get the id from the parent to pass on
                     child_keys = {"parent": parent_id}  # Record the parent for this child
                     child = parser.get_pytube(child)    # Wrap those children in pytube objects
                     child_id = parser.get_id(child)     # Get the id for the single
+
                     child_keys = parser.get_keys(child, child_keys) # Get the rest of the keys from the pytube object
                     print(f'Adding child {child_id} and {child_keys} to singles table')
                     singles_table[child_id] = child_keys            # Add child to the database

@@ -14,6 +14,16 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+defaults = {                # These are the default global configs if not specified
+    "filetree": "wide",     # This sets the filetree type ----- currently not used
+    "resolution": "best",   # What type of video resolution to download
+    "dl_video": True,       # Whether to download video
+    "dl_captions": False,   # Whether to download captions
+    "dl_audio": False,      # Whether to download audio
+    "dl_thumbnail": False,  # Whether to download the thumbnail
+    "captions": ["en", "a.en"]  # Which caption types to check for
+}
+
 config_file = "youmirror.toml"                                      # This is the name for the config file to be used
 valid_options = {"youmirror", "channels", "playlists", "singles"}   # These are the valid global options
 valid_yt = {"channels", "playlists", "singles"}                     # Valid youtube types for the config
@@ -103,7 +113,8 @@ def load_config(config_path: str) -> dict:
     Loads the config file and returns as a dictionary
     '''
     try:
-        return toml.load(open(config_path))
+        config = toml.load(open(config_path))   # Dictionary from the config file
+        return 
     except Exception as e:
         logging.exception(f"Could not parse given config file due to {e}")
         return None
