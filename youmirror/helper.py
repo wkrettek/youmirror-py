@@ -63,9 +63,9 @@ def verify_config(filepath: Path) -> Path:
     else:
         return None
 
-def calculate_path(yt: Union[Channel, Playlist, YouTube]) -> Path:
+def calculate_path(yt: Union[Channel, Playlist, YouTube]) -> str:
     '''
-    Calculates the filepath for the given object.
+    Calculates the filepath for the given pytube object.
     Root
       | -- channels
               | -- channel name
@@ -80,19 +80,20 @@ def calculate_path(yt: Union[Channel, Playlist, YouTube]) -> Path:
                         | -- audio
                         | -- thumbnails
       | -- singles
-              | -- single name
-                        | -- videos
-                        | -- captions
-                        | -- audio
-                        | -- thumbnails
+              | -- videos
+              | -- captions
+              | -- audio
+              | -- thumbnails
     '''
     path_dict = {Channel: "channels", Playlist: "playlists", YouTube: "singles"}    # Dict to sort from object to path
-    print("Type = ", type(yt))
-    path = Path(path_dict[type(yt)])            # The object type will inform us where to sort it
-    print("Path = ", path)
-    pathname = path/Path(parser.get_name(yt))   # Add the channel/playlist/single's name to the path
-    # Resolve collision, need to add some handling here in case we want to overwrite
-    return "str(pathname)"
+    object_type = type(yt)                          # Get the type of pytube object
+    pathname = Path(path_dict[object_type])         # The object type will inform us where to sort it
+    if isinstance(yt, YouTube):                     # If it's a single, stop here
+        return str(pathname)
+    pathname = pathname/Path(parser.get_name(yt))   # Add the channel/playlist's name to the path
+    # Resolve collision, need to add some handling here in case it sees a duplicate and that's okay
+    # I guess if we only do this while adding then it will always be okay, because we catch duplicates before getting to this stage? We won't be calculating the filepath, we'll be checking it against the 
+    return  str(pathname)
 
 # TODO
 def resolve_collision(yt: YouTube, filename: Path) -> Path:
@@ -116,8 +117,9 @@ def calculate_filename(yt: YouTube) -> str:
     except Exception as e:
         return None
 
-def calculate_path(yt: Union[Channel, Playlist, YouTube]) -> str:
+def verify_installation():
     '''
-    Determines the output path for the given pytube object
+    Take a database entry and verify that it is fully installed
     '''
+    pass
 

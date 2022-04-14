@@ -2,6 +2,7 @@ import youmirror.parser as parser
 import youmirror.downloader as downloader
 import youmirror.helper as helper
 import youmirror.configurer as configurer
+import youmirror.databaser as databaser
 import datetime
 import logging
 from typing import Optional, Union
@@ -129,43 +130,34 @@ class YouMirror:
             configurer.add_item(id, specs, self.config)            # Add the url to the config
             to_add.append(yt)                                      # Mark it for adding
 
-        # Open the database
-        channels_table = SqliteDict(db_path, tablename="channels", autocommit=True)
-        playlists_table = SqliteDict(db_path, tablename="playlists", autocommit=True)
-        singles_table = SqliteDict(db_path, tablename="singles", autocommit=True)
+        # Open the database tables
+        channels_table = databaser.get_table(db_path, "channels")
+        playlists_table = databaser.get_table(db_path, "playlists")
+        singles_table = databaser.get_table(db_path, "singles")
 
-        # Build necessary info
-        keys = parser.get_keys(yt)
-        
-        # Add to the database
-        if type(yt) == Channel:
-            channels_table[id] = keys
-        elif type(yt) == Playlist:
-            playlists_table[id] = keys
-        elif type(yt) == YouTube:
-            singles_table[id] = keys
-            # Channels
-                # id
-                # name
-                # children
-                # available
-                # path
-            # Playlists
-                # id
-                # name
-                # children
-                # available
-                # path
-            # Singles
-                # id
-                # name
-                # parent
-                # available
-                # path
-                # captions
+        type_to_table = {Channel: channels_table, Playlist: playlists_table, YouTube: singles_table}  # Translation dict for pytube type to db table
+        # Add the items to the database
+        to_download: list[YouTube] = []     # List of items to download
+        for item in to_add:                 # Search through all the pytube objects we want to add
+            id = parser.get_id(item)
+            keys = parser.get_keys(item, dict())    # Get the info from the object to add
+            table = type_to_table[type(item)]       # Get the appropriate table for the object
+            print(f"Adding {id} to table {table}")
+            table[id] = keys                        # Add the item to the database
+            if children := parser.get_children(item):   # If there are any children
+                for child in children: # Process children if the object has them
+                    parent_id = parser.get_id(item)     # Get the id from the parent to pass on
+                    child_keys = {"parent": parent_id}  # Record the parent for this child
+                    child = parser.get_pytube(child)    # Wrap those children in pytube objects
+                    child_id = parser.get_id(child)     # Get the id for the single
+                    child_keys = parser.get_keys(child, child_keys) # Get the rest of the keys from the pytube object
+                    print(f'Adding child {child_id} and {child_keys} to singles table')
+                    singles_table[child_id] = child_keys            # Add child to the database
+
+
 
         # If downloading is enabled, download the video(s)
-            # If not force, report how much downloading there is to do
+            # If not forced, report how much downloading there is to do
 
         # Update config file
         self.to_toml(config_path)

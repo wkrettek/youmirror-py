@@ -1,13 +1,35 @@
+
+'''
+This module handles all of the downloading to disk, and parses whatever 
+filters were passed down from the config 
+'''
 from pytube import YouTube
 from typing import Optional
 import logging
-import os
+from pathlib import Path
+
+defaults = {
+    "video_extension": ".mp4",
+    "audio_extension": ".mp3",
+    "resolution": "best"
+    }
+
+
+def download_single(yt: YouTube, **kwargs):
+    '''
+    Takes a single YouTube object and handles the downloading based on configs
+    '''
+    # If video, download_video()
+    # If caption, download_captions()
+    # If audio, download_audio()
+    # If thumbnail, download_thumbnail()
 
 
 def download_video( 
     url: str, 
     filename: Optional[str] = None, 
     output_path : Optional[str] = "", 
+    **kwargs
 ) -> str:
     '''
     Download a single video
@@ -36,6 +58,7 @@ def download_captions(
     url: str,
     filename: Optional[str] = None,
     output_path: Optional[str] = "",
+    **kwargs
     ) -> str:
     '''
     Download selected captions from a video
@@ -43,18 +66,3 @@ def download_captions(
     filepath = ""
     output_path += "videos/"
     return filepath
-
-
-def download_channel(self, url: str, filename: Optional[str]) -> None:
-    '''
-    Download all videos from a channel
-    '''
-    prefix = self.root + "channels/" + YouTube(url).channel_id
-    # self.download_single(url=url, filename=filename, filename_prefix=)
-    pass
-
-def download_playlist(self) -> None:
-    '''
-    Download all videos from a playlist
-    '''
-    pass

@@ -109,15 +109,15 @@ def get_url(yt: Union[YouTube, Channel, Playlist]) -> str:
 
 def get_children(yt: Union[Channel, Playlist]) -> list[str]:
     '''
-    Takes either a Channel or Playlist object and returns the video links inside it as a list of strings
+    Takes either a Channel or Playlist object and returns its video links as a list of strings
     '''
     if isinstance(yt, Channel):
         logging.debug(f"Getting children for {yt.vanity_url}")
-        children = [get_id(get_pytube(url)) for url in yt.video_urls]  # Will need to simplify this later on 
+        children = [url for url in yt.video_urls]  # Will need to simplify this later on 
         return children
     elif isinstance(yt, Playlist):
         logging.debug(f"Getting children for {yt.title}")
-        children = [get_id(get_pytube(url)) for url in yt.video_urls]  # Will definitely wrap this in a function later on
+        children = [url for url in yt.video_urls]  # Will definitely wrap this in a function later on
         return children
     else: 
         return None
@@ -133,26 +133,49 @@ def is_available(yt: YouTube) -> bool:
         return False
 
 
-def get_keys(yt: Union[Channel, Playlist, YouTube]) -> dict:
+def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict) -> dict:
     '''
     Gets the keys that we want to put into the database and returns as a dictionary
+            Channels
+                id
+                name
+                children
+                available
+                path
+            Playlists
+                id
+                name
+                children
+                available
+                path
+            Singles
+                id
+                name
+                parent
+                available
+                path
+                captions
+    You can pass in a dict if you want to inject some values from above
     '''
-    keys = dict()
     if isinstance(yt, Channel):
         keys["name"] = yt.channel_name
-        keys["children"] = " ".join(get_children(yt))
+        children = get_children(yt)
+        children_ids = [get_id(get_pytube(child)) for child in children]
+        keys["children"] = children_ids
         keys["available"] = True            # We will add a check later to determine this
         keys["path"] = helper.calculate_path(yt)
         return keys
     elif isinstance(yt, Playlist):
         keys["name"] = yt.title
-        keys["children"] = " ".join(get_children(yt))
+        children = get_children(yt)
+        children_ids = [get_id(get_pytube(child)) for child in children]
+        keys["children"] = children_ids
         keys["available"] = True            # We will add a check later to determine this
         keys["path"] = helper.calculate_path(yt)
         return keys
     elif isinstance(yt, YouTube):
         keys["name"] = yt.title
-        keys["parent"] = None               # Singles will only get here if there is no parent
+        # keys["parent"] = if "parent" in keys               # Singles will only get here if there is no parent
                                             # If there is a parent, we will add it later
         keys["available"] = is_available(yt)
         keys["path"] = helper.calculate_path(yt)
