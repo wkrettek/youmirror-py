@@ -3,11 +3,11 @@ import youmirror.downloader as downloader
 import youmirror.helper as helper
 import youmirror.configurer as configurer
 import youmirror.databaser as databaser
-import logging
-from typing import Optional, Union
+import logging                      # Logging
+from typing import Optional, Union  # For typing
 from urllib import parse
-from sqlitedict import SqliteDict
-import toml
+from sqlitedict import SqliteDict   # Databasing
+import toml                         # Configuring # TODO move to configurer
 from pytube import YouTube, Channel, Playlist
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
 from tqdm import tqdm       # Progress bar
