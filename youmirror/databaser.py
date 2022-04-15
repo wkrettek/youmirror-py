@@ -96,6 +96,17 @@ def get_key(table: SqliteDict, id: str, key: str) -> str:
         logging.exception(f"Could not set key {key} in id {id} due to {e}")
         return None
 
+def add_yt(table: SqliteDict, filetree: SqliteDict, yt_string: str, id: str, keys: dict, ) -> None:
+    '''
+    Adds the yt and its info to the database
+    '''
+    pass
+
+def remove_yt(table: SqliteDict, filetree: SqliteDict):
+    '''
+    Removes the yt and its info from the database
+    '''
+    pass
 
 
 def set_files(table: SqliteDict, id: str, files: dict) -> dict:

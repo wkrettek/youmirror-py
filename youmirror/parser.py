@@ -24,6 +24,17 @@ def link_type(url: str) -> str:
     else:
         logging.error(f"\'{url}\' is not a valid url")
         return None
+    
+def yt_to_type_string(yt: Union[Channel, Playlist, YouTube]) -> str:
+    '''
+    Gets the type of the given pytube object and returns a string
+    '''
+    yt_type = type(yt)                      # Get type of pytube object
+    if yt_type in yt_type_to_string:        # If it is a valid type
+        return yt_type_to_string[yt_type]   # Return the translated string
+    else:
+        logging.error(f'Object {yt_type} is not a valid yt_type')
+
 
 def get_metadata(yt: YouTube) -> dict:
     print(yt.metadata)
@@ -136,7 +147,7 @@ def is_available(yt: YouTube) -> bool:
         return False
 
 
-def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict) -> dict:
+def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: str, filetree: dict) -> dict:
     '''
     Gets the keys that we want to put into the database and returns as a dictionary
             Channels
@@ -159,6 +170,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict) -> dict:
                 path
                 captions
     You can pass in a dict if you want to inject some values from above
+    This is going to be a heavy function that calls from a lot of places. It's calculating a lot of things
     '''
     if isinstance(yt, Channel):
         keys["name"] = yt.channel_name

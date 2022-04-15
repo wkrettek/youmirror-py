@@ -17,6 +17,7 @@ from pathlib import Path
 defaults = {                # These are the default global configs if not specified
     "filetree": "wide",     # This sets the filetree type ----- currently not used
     "resolution": "best",   # What type of video resolution to download
+    "dry_run": False,       # Dry run means don't download automatically
     "dl_video": True,       # Whether to download video
     "dl_captions": False,   # Whether to download captions
     "dl_audio": False,      # Whether to download audio
@@ -114,10 +115,9 @@ def load_config(config_path: str) -> dict:
     '''
     try:
         config = toml.load(open(config_path))   # Dictionary from the config file
-        return 
+        return config
     except Exception as e:
-        logging.exception(f"Could not parse given config file due to {e}")
-        return None
+        logging.exception(f"Could not load config file {config_path} due to {e}")
 
 def save_config(config_path: Path, config: dict) -> Path:
     '''
@@ -133,7 +133,6 @@ def save_config(config_path: Path, config: dict) -> Path:
             return None
     except Exception as e:
         logging.exception(f"Could not write config file due to {e}")
-        return None
 
 def new_config(config_path: Path, root: str) -> Path:
     '''
@@ -154,6 +153,5 @@ def new_config(config_path: Path, root: str) -> Path:
             return None
     except Exception as e:
         logging.exception(f"Failed to create new config file due to {e}")
-        return None
 
 
