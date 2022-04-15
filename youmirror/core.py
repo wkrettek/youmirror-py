@@ -115,12 +115,11 @@ class YouMirror:
             table = string_to_table[yt_string]  # Get the appropriate table for the object
             table[id] = keys                    # Add the item to the database
 
-            item_path = keys["path"]            # Get the calculated path from the keys
-            filetree_table[item_path] = {"type": "path"}      # Record the path in the filetree table
-
             if "children" in keys:              # If any children appeared when we got keys
+                item_path = keys["path"]                        # Get the calculated path from the keys
+                filetree_table[item_path] = {"type": "path"}    # Record the path in the filetree table
             # if children := parser.get_children(item):   # If there are any children
-                for child in keys["children"]:
+                for child in parser.get_children(item):   # We have to get the children again to get urls instead of ids :/
 
                     # Get parent info        
                     parent_id = parser.get_id(item)     # Get parent's id
@@ -132,7 +131,10 @@ class YouMirror:
 
                     child_keys = parser.get_keys(child, child_keys, active_options, filetree_table) # Get the rest of the keys from the pytube object
                     print(f'Adding child {child_id} and {child_keys} to singles table')
-                    singles_table[child_id] = child_keys                                            # Add child to the database
+                    singles_table[child_id] = child_keys    # Add child to the database
+                    files = child_keys["files"]             # Get the files from the keys
+                    for file in files:
+                        filetree_table[file] = {"type": "file"}
 
 
 
@@ -156,7 +158,7 @@ class YouMirror:
             root = self.root
         path = Path(root)
         # Config setup
-        config_path = helper.get_path(root, self.config_file)   # Get the config file & ensure it exists
+        config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
         if not helper.verify_config(config_path):               # Verify the config file   
             logging.error(f'Could not find config file in root directory \'{config_path}\'')
             return     

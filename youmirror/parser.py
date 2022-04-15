@@ -2,6 +2,7 @@
 This module parses youtube urls, wraps them in pytube objects and 
 pulls information from pytube objects
 '''
+from sys import meta_path
 from pytube import YouTube, Channel, Playlist
 from typing import Union, Callable, Any
 import youmirror.helper as helper
@@ -36,12 +37,29 @@ def yt_to_type_string(yt: Union[Channel, Playlist, YouTube]) -> str:
         logging.error(f'Object {yt_type} is not a valid yt_type')
 
 
-def get_metadata(yt: YouTube) -> dict:
-    print(yt.metadata)
-    metadata = {}
-    metadata["title"] = yt.title
-    metadata["author"] = yt.author
-    return metadata
+def get_metadata(yt: Union[Channel, Playlist, YouTube]) -> dict:
+    '''
+    Returns the metadata of a given pytube object as a dict
+    '''
+    meta = dict()
+    if isinstance(yt, Channel):
+        meta["name"] = yt.channel_name
+        children = get_children(yt)
+        children_ids = set([get_id(get_pytube(child)) for child in children])    # We want the ids (not urls) for databasing purposes
+        meta["children"] = children_ids
+        meta["available"] = True            # We will add a check later to determine this
+
+    elif isinstance(yt, Playlist):
+        meta["name"] = yt.title
+        children = get_children(yt)
+        children_ids = set([get_id(get_pytube(child)) for child in children])    # We want the ids (not urls) for databasing purposes
+        meta["children"] = children_ids
+        meta["available"] = True            # We will add a check later to determine this
+
+    elif isinstance(yt, YouTube):
+        meta["name"] = yt.title
+        meta["available"] = is_available(yt)
+    return meta
 
 def is_available(yt: YouTube) -> bool:
     try:
@@ -134,7 +152,7 @@ def get_children(yt: Union[Channel, Playlist]) -> list[str]:
         children = [url for url in yt.video_urls]  # Will definitely wrap this in a function later on
         return children
     else: 
-        return None
+        return ""
 
 def is_available(yt: YouTube) -> bool:
     '''
@@ -147,7 +165,7 @@ def is_available(yt: YouTube) -> bool:
         return False
 
 
-def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: str, filetree: dict) -> dict:
+def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, filetree: dict) -> dict:
     '''
     Gets the keys that we want to put into the database and returns as a dictionary
             Channels
@@ -161,42 +179,57 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: str, fi
                 name
                 children
                 available
-                path
+                paths
             Singles
                 id
                 name
                 parent
                 available
-                path
-                captions
+                files
     You can pass in a dict if you want to inject some values from above
     This is going to be a heavy function that calls from a lot of places. It's calculating a lot of things
     '''
-    dl = options["dl_video"]
-    if isinstance(yt, Channel):
-        keys["name"] = yt.channel_name
-        children = get_children(yt)
-        children_ids = [get_id(get_pytube(child)) for child in children]
-        keys["children"] = children_ids
-        keys["available"] = True            # We will add a check later to determine this
-        keys["path"] = helper.calculate_path(yt)
+    to_download = { # Returns true/false if we want to download the video
+        "videos": options["dl_video"], 
+        "audio": options["dl_audio"], 
+        "captions": options["dl_captions"], 
+        "thumbnails": options["dl_thumbnail"]
+    }
+    yt_string = yt_to_type_string(yt)   # Get the type as a string
+    if yt_string == "channel":
+        metadata = get_metadata(yt)
+        keys.update(metadata)
+        yt_id = get_id(yt)
+        keys["paths"] = set()
+        for file_type in to_download:
+            if to_download[file_type]:
+                path = helper.calculate_path(file_type, yt_string, keys["name"])
+                path = helper.resolve_collision(path, filetree, yt_id)
+                keys["paths"].add(path)
         return keys
-    elif isinstance(yt, Playlist):
-        keys["name"] = yt.title
-        children = get_children(yt)
-        children_ids = [get_id(get_pytube(child)) for child in children]
-        keys["children"] = children_ids
-        keys["available"] = True            # We will add a check later to determine this
-        keys["path"] = helper.calculate_path(yt)
+    elif yt_string == "playlist":
+        metadata = get_metadata(yt)
+        keys.update(metadata)
+        yt_id = get_id(yt)
+        keys["paths"] = set()
+        for file_type in to_download:
+            if to_download[file_type]:
+                path = helper.calculate_path(file_type, yt_string, keys["name"])
+                path = helper.resolve_collision(path, filetree, yt_id)
+                keys["paths"].add(path)
         return keys
-    elif isinstance(yt, YouTube):
-        keys["name"] = yt.title
-        # keys["parent"] = if "parent" in keys               # Singles will only get here if there is no parent
-                                            # If there is a parent, we will add it later
-        keys["available"] = is_available(yt)
-        keys["path"] = 
-        keys["files"] = helper.calculate_filepaths(yt)
-
+    elif yt_string == "single":
+        metadata = get_metadata(yt)
+        keys.update(metadata)
+        if "parent_name" not in keys:
+            keys["parent_name"] = ""
+        yt_id = get_id(yt)
+        keys["files"] = set()
+        for file_type in to_download:
+            if to_download[file_type]:
+                filepath = helper.calculate_filepath(file_type, yt_string, keys["parent_name"], keys["name"])
+                filepath = helper.resolve_collision(filepath, filetree, yt_id)
+                keys["files"].add(filepath)
         return keys
     else: 
-        return None
+        logging(f"Failed to get keys for {yt}")

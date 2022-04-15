@@ -59,14 +59,7 @@ I think I can implement an "export" command later on to use the db to export thi
 from pathlib import Path
 import logging
 
-
-def get_path(path : str, filename : str) -> Path:
-    '''
-    Wraps a path and filename into a Path object
-    '''
-    path = Path(path)   # Wrap the path
-    filepath = path/Path(filename)
-    return filepath
+valid_file_types = {"videos", "captions", "audio", "thumbnails"}  # Valid file types
 
 def file_exists(filepath: Path) -> bool:
     '''
@@ -98,47 +91,55 @@ def create_path(path: Path) -> None:
     except Exception as e:
         print(e)
 
-def calculate_path(file_type: str, parent_type: str, parent_name, yt_id: str) -> str:
+def calculate_path(file_type: str, yt_type: str, parent_name) -> str:
     '''
-    Calculates the filepath from the given database settings and returns a string
-    wide formula = /file_type/parent_type/parent_name
-    tall formula = /parent_type/parent_name/file_type
+    Calculates 
+    wide formula = /file_type/yt_type/parent_name
+    tall formula = /yt_type/parent_name/file_type
     '''
-    file_types = {"videos", "captions", "audio", "thumbnails"}  # Valid file types
-    parent_types = {"channels", "playlists", "singles"}         # Valid parent types
-    path = Path(file_type)/Path(parent_type)/Path(parent_name)  # Build the filepath
-    # TODO Resolve collision, need to add some handling here in case it sees a duplicate
-    # path = resolve_collision(path, yt_id)
+    # File type comes from options
+    # Parent type comes from yt type
+    # Parent name comes from yt name
+
+    yt_types = {"channel": "channels","playlist": "playlists", "single": "singles"}         # Valid parent types
+    if yt_type in yt_types:             # Check the yt_type is valid
+        yt_type = yt_types[yt_type] # Yes I know this is dumb but I need to make it plural for formatting reasons
+    
+    path = Path(file_type)/Path(yt_type)/Path(parent_name)  # Build the filepath
     return  str(path)
 
-# TODO
-def resolve_collision(path: Path, yt_id: str) -> Path:
+def calculate_filename(file_type: str, yt_name: str) -> str:
     '''
-    Appends the yt_id if the path already exists
-    This could cause a lot of issues if we're not careful. I think committing
-    all changes to the db at once will solve this
-    ---- This is gonnna be super hard ----
+    Calculates the filename from the given database settings and returns a string
     '''
-    if path.exists():                           # If the path already exists
-        path = Path(str(path) + f'_ym{yt_id}' ) # Append "_ym{yt_id}" to the end of the name 
-    return path
-
-def calculate_filename(name: str, extension: str) -> str:
-    '''
-    Determines the filename from the name and extension
-    '''
-    try:
-        filename = name + extension
-        # filename = resolve_collision()
+    # File type comes from options
+    # Parent type comes from yt type
+    # Parent name comes from yt name
+    file_type_to_extension = {"videos": ".mp4", "captions": ".srt", "audio": ".mp3", "thumbnails": ".jpg"}
+    if file_type in valid_file_types:
+        extension = file_type_to_extension[file_type]
+        filename = f"{yt_name}.{extension}"
         return filename
-    except Exception as e:
-        return None
+    else:
+        logging.error(f"Invalid file type {file_type} passed") 
 
-def calculate_filepaths() -> list[str]:
+def calculate_filepath(file_type: str, yt_type: str, parent_name: str,  yt_name: str,) -> str:
     '''
     Calculates what filepaths apply to a given 
     '''
+    path = calculate_path(file_type, yt_type, parent_name)
+    filename = calculate_filename(file_type, yt_name)
+    filepath = Path(path)/Path(filename)
+    return str(filepath)
 
+# TODO
+def resolve_collision(path: str, filetree: dict, yt_id: str) -> Path:
+    '''
+    Appends the yt_id if the path already exists
+    '''
+    if path in filetree:                           # If the path already exists
+        path = Path(str(path) + f'_ym{yt_id}' ) # Append "_ym{yt_id}" to the end of the name 
+    return path
 
 def verify_installation(filepath: Path) -> bool:
     '''

@@ -1,11 +1,14 @@
 Parser
     Be able to rip all the metadata
-        -Somehow rip just enough not to cause any errors.. I guess just skip metadata we can't get that's not crucial
+        Somehow rip just enough not to cause any errors.. I guess just skip metadata we can't get that's not crucial
+    for get_keys():
+        Wrap up ripping metadata into a function
+        generate filename is definitely a helper thing
+        resolve collision is maybe a database thing?
 Helper
     Can I rename this thing??
-    Have to resolve somehow if there is a naming conflict... Honestly do not freaking know how. I want it to be something simple that is unobtrusive to understanding it.. And even more ideally than that.... was obviously resolved by youmirror and can be removed if need be
 Databaser
-    Used for the more complex db operations (if necessary)
+    Wrap up the databasing as much as possible to abstract it from database implementation
         using sqlitedict for now
 Downloader
     Calculate all the filepaths before hand, only download at the very end
