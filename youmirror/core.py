@@ -16,6 +16,8 @@ from tqdm import tqdm       # Progress bar
 
 logging.basicConfig(level=logging.INFO)
 
+plurals = {"single": "singles", "channel": "channels", "playlist": "playlists"} # This is dumb but we're doing it for now
+
 # This is the main class for maintaining a youmirror
 class YouMirror:
 
@@ -73,6 +75,7 @@ class YouMirror:
         global_options = configurer.get_options("youmirror", self.config)   # Get global options
         active_options.update(global_options)                               # Overwrite with globals
         # active_options.update(kwargs)                                     # Overwrite with command line options
+        print("Active options:", active_options)
 
         # Parse the url & create pytube object
         try:
@@ -95,10 +98,12 @@ class YouMirror:
         yt_string = parser.yt_to_type_string(yt)                # Get the yt type string
         if configurer.yt_exists(yt_string, id, self.config):
             logging.info(f"{url} already exists in the mirror")
+            return                                              # End command here. TODO: remove this if we add the ability to do multiple URLS
         else:
             logging.info(f"Adding {url} to the mirror")
-            self.config = configurer.add_yt(yt_string, id, self.config, specs)           # Add the url to the config
-            to_add.append(yt)                                   # Mark it for adding
+            self.config[yt_string][id] = specs                  # For testing we do this
+            # configurer.add_yt(yt_string, id, self.config, specs)       # Add the url to the config
+            to_add.append(yt)                                            # Mark it for adding
 
         # Open the database tables
         channels_table = databaser.get_table(db_path, "channels")
@@ -111,13 +116,23 @@ class YouMirror:
         # Add the items to the database
         to_download: list[YouTube] = []     # List of items to download
         for item in to_add:                 # Search through all the pytube objects we want to add
-            keys = parser.get_keys(item, dict(), active_options, filetree_table)    # Get all the keys to add to the table
+            keys = parser.get_keys(item, dict(), active_options, dict())    # Get all the keys to add to the table
+            print("Keys:", keys)
             table = string_to_table[yt_string]  # Get the appropriate table for the object
             table[id] = keys                    # Add the item to the database
+            logging.info(f"Adding {url} to the database")
 
-            if "children" in keys:              # If any children appeared when we got keys
-                item_path = keys["path"]                        # Get the calculated path from the keys
-                filetree_table[item_path] = {"type": "path"}    # Record the path in the filetree table
+            if "files" in keys:
+                files = keys["files"]             # Get the files from the keys
+                for file in files:
+                    filetree_table[file] = {"type": "file"}
+                    logging.info(f"Adding {file} to the database")
+
+            if "children" in keys:                              # If any children appeared when we got keys
+                item_path = next(iter(keys["paths"]))          # Get a calculated path from the keys
+                item_path = item_path.split("/")[1:]            # Split the first bit off
+                item_path = item_path.join("/")                 # Join the list back together
+                # filetree_table[item_path] = {"type": "path"}    # Record the path in the filetree table
             # if children := parser.get_children(item):   # If there are any children
                 for child in parser.get_children(item):   # We have to get the children again to get urls instead of ids :/
 
@@ -130,11 +145,15 @@ class YouMirror:
                     child_id = parser.get_id(child)     # Get the id for the single
 
                     child_keys = parser.get_keys(child, child_keys, active_options, filetree_table) # Get the rest of the keys from the pytube object
+                    print("Child keys:", child_keys)
                     print(f'Adding child {child_id} and {child_keys} to singles table')
                     singles_table[child_id] = child_keys    # Add child to the database
+                    logging.info(f"Adding {url} to the database")
                     files = child_keys["files"]             # Get the files from the keys
                     for file in files:
                         filetree_table[file] = {"type": "file"}
+                        logging.info(f"Adding {file} to the database")
+                    
 
 
 

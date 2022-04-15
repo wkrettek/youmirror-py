@@ -45,11 +45,11 @@ def get_table(path: Path, table: str) -> SqliteDict:
     '''
     Returns a table from the database that matches the string
     '''
-    valid_tables = {"channels", "playlists", "singles"}
+    valid_tables = {"channels", "playlists", "singles", "filetree"}
     if table in valid_tables:
         return SqliteDict(path, tablename=table, autocommit=True)   # TODO in the future I would like to wait to commit all at once, but I get concurrency errors without it
     else:
-        logging.debug(f"Invalid table {table} given")
+        logging.error(f"Invalid table {table} given")
         return None
 
 def set_id(table: SqliteDict, id: str, value: dict) -> None:

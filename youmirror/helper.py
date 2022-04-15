@@ -118,7 +118,7 @@ def calculate_filename(file_type: str, yt_name: str) -> str:
     file_type_to_extension = {"videos": ".mp4", "captions": ".srt", "audio": ".mp3", "thumbnails": ".jpg"}
     if file_type in valid_file_types:
         extension = file_type_to_extension[file_type]
-        filename = f"{yt_name}.{extension}"
+        filename = f"{yt_name}{extension}"
         return filename
     else:
         logging.error(f"Invalid file type {file_type} passed") 
@@ -133,12 +133,15 @@ def calculate_filepath(file_type: str, yt_type: str, parent_name: str,  yt_name:
     return str(filepath)
 
 # TODO
-def resolve_collision(path: str, filetree: dict, yt_id: str) -> Path:
+def resolve_collision(path: str, filetree: dict, yt_id: str) -> str:
     '''
     Appends the yt_id if the path already exists
     '''
-    if path in filetree:                           # If the path already exists
-        path = Path(str(path) + f'_ym{yt_id}' ) # Append "_ym{yt_id}" to the end of the name 
+    if path in filetree:                        # If the path already exists
+        logging.debug(f"Path {path} already exists")
+        stem = Path(path).stem                  # Get the stem of the path
+        suffix = Path(path).suffix              # Get the suffix of the path
+        path = stem + f'_ym{yt_id}' + suffix    # Append "_ym{yt_id}" to the end of the name, reattach suffix 
     return path
 
 def verify_installation(filepath: Path) -> bool:

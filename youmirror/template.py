@@ -11,15 +11,15 @@ template = {
     "default_resolution": "best"
     },
 
-    "channels":
+    "channel":
     {
 
     },
-    "playlists":
+    "playlist":
     {
 
     },
-    "singles":
+    "single":
     {
 
     }
