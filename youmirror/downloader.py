@@ -3,10 +3,10 @@
 This module handles all of the downloading to disk, and parses whatever 
 filters were passed down from the config 
 '''
-from pytube import YouTube, StreamQuery, Stream, CaptionQuery, Caption
-from typing import Optional
+from pytube import YouTube, StreamQuery, Stream, Caption
 import logging
 from pathlib import Path
+from urllib.request import urlretrieve  # Using this to download thumbnails
 
 file_types = {"video", "caption", "audio", "thumbnail"}
 
@@ -72,41 +72,25 @@ def download_thumbail(yt: YouTube, filepath: str, options: dict) -> str:
     '''
     file_type = "thumbnail"
     url = yt.thumbnail_url  # For now, pytube can only get the url for a thumbnail
+    urlretrieve(url, filename=filepath)
+    # TODO implement a way to download the url, probably copy however pytube manages to do it without dependencies
 
 def download_single(yt: YouTube, filepath: str, options: dict):
     '''
     Takes a single YouTube object and handles the downloading based on configs
     '''
-    # If video, download_video()
-    # If caption, download_captions()
-    # If audio, download_audio()
-    # If thumbnail, download_thumbnail()
+    extension_to_file_type = {
+        "mp4":"video", "mp3": "audio", 
+        "srt": "caption", ".jpg": "thumbnail"
+        }
 
-# def download_video( 
-#     url: str, 
-#     filename: Optional[str] = None, 
-#     output_path : Optional[str] = "", 
-#     **kwargs
-# ) -> str:
-#     '''
-#     Download a single video
-#     '''
-#     yt = YouTube(url)
-#     title = yt.title
-#     author = yt.author
-#     stream = yt.streams.get_highest_resolution()
-#     # Must have the root in the path
-#     output_path += "videos/"
-#     if not filename:
-#         filename = stream.default_filename
-#     print(f'Saving {title} to {output_path + filename}')
-    
-#     # Download the video
-#     logging.info("Downloading %s to %s", url, output_path)
-#     try:
-#         stream.download(output_path, filename)
-#     except FileNotFoundError:   # If the directory doesn't exist, create it
-#         logging.info(f"Creating directory {output_path}")
-#         os.makedirs(output_path, exist_ok=True)
-#     filepath = output_path + filename
-#     return filepath # Return the filepath of the downloaded video
+    file_type_to_do = { # Translation from file type to func
+        "video": download_video, 
+        "audio": download_audio, 
+        "caption": download_caption, 
+        "thumbnail": download_thumbail
+    }
+    extension = Path(filepath).suffix   # Get the extension
+    file_type = extension_to_file_type[extension]   # Convert to file type
+    func = file_type_to_do[file_type]   # Figure out what to do
+    func(yt, filepath, options)         # Call the function
