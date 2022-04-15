@@ -7,7 +7,8 @@ from youmirror.core import YouMirror
 app = typer.Typer()
 
 def main():
-    app()
+    print("DICK")
+    # app()
 
 @app.command()
 def sync(
