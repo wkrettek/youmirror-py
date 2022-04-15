@@ -7,8 +7,8 @@ from youmirror.core import YouMirror
 app = typer.Typer()
 
 def main():
-    print("DICK")
-    # app()
+
+    app()
 
 @app.command()
 def sync(
@@ -31,13 +31,13 @@ def new(
     Create a new config file from the template
     '''
     ym = YouMirror()
-    ym.new(root, config_file)
+    ym.new(root)
     return
 
 @app.command()
 def add(
-    url : str,
-    dry_run: bool = False
+    url : str = typer.Argument(None),
+    root : str = typer.Argument("."),
     ):
     '''
     Adds the specified channel, playlist, or single to the config file and downloads

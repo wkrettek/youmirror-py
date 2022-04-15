@@ -16,10 +16,10 @@ from tqdm import tqdm       # Progress bar
 
 logging.basicConfig(level=logging.INFO)
 
-plurals = {"single": "singles", "channel": "channels", "playlist": "playlists"} # This is dumb but we're doing it for now
-
-# This is the main class for maintaining a youmirror
 class YouMirror:
+    '''
+    Main class for maintaining a youmirror
+    '''
 
     def __init__(
         self,
@@ -131,8 +131,8 @@ class YouMirror:
             if "children" in keys:                              # If any children appeared when we got keys
                 item_path = next(iter(keys["paths"]))          # Get a calculated path from the keys
                 item_path = item_path.split("/")[1:]            # Split the first bit off
-                item_path = item_path.join("/")                 # Join the list back together
-                # filetree_table[item_path] = {"type": "path"}    # Record the path in the filetree table
+                item_path = "/".join(item_path)                 # Join the list back together
+                filetree_table[item_path] = {"type": "path"}    # Record the path in the filetree table
             # if children := parser.get_children(item):   # If there are any children
                 for child in parser.get_children(item):   # We have to get the children again to get urls instead of ids :/
 
@@ -148,7 +148,7 @@ class YouMirror:
                     print("Child keys:", child_keys)
                     print(f'Adding child {child_id} and {child_keys} to singles table')
                     singles_table[child_id] = child_keys    # Add child to the database
-                    logging.info(f"Adding {url} to the database")
+                    logging.info(f"Adding {child} to the database")
                     files = child_keys["files"]             # Get the files from the keys
                     for file in files:
                         filetree_table[file] = {"type": "file"}
