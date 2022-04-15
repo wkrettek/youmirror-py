@@ -1,0 +1,13 @@
+[youmirror]
+name = "testmirror"
+default_resolution = "best"
+created_at = "2022-04-15"
+
+[playlist]
+
+[single]
+
+[channel."/c/TheAlwaysSunnyPodcast"]
+name = "The Always Sunny Podcast"
+url = "http://www.youtube.com/c/TheAlwaysSunnyPodcast"
+type = "channel"

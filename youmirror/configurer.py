@@ -16,7 +16,7 @@ from pathlib import Path
 
 defaults = {                # These are the default global configs if not specified
     "filetree": "wide",     # This sets the filetree type ----- currently not used
-    "resolution": "best",   # What type of video resolution to download
+    "resolution": "highest",   # What type of video resolution to download
     "dry_run": False,       # Dry run means don't download automatically
     "dl_video": True,       # Whether to download video
     "dl_captions": False,   # Whether to download captions

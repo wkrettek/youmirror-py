@@ -122,8 +122,9 @@ class YouMirror:
             table[id] = keys                    # Add the item to the database
             logging.info(f"Adding {url} to the database")
 
-            if "files" in keys:
-                files = keys["files"]             # Get the files from the keys
+            if "files" in keys:             # This means we passed a single
+                to_download.append(item)    # Mark it for downloading
+                files = keys["files"]       # Get the files from the keys
                 for file in files:
                     filetree_table[file] = {"type": "file"}
                     logging.info(f"Adding {file} to the database")
@@ -142,6 +143,7 @@ class YouMirror:
                     child_keys = {"parent_id": parent_id, "parent_name": parent_name, "path": item_path} # passing this to get_keys()
 
                     child = parser.get_pytube(child)    # Wrap those children in pytube objects
+                    to_download.append(child)           # Mark this YouTube object for downloading
                     child_id = parser.get_id(child)     # Get the id for the single
 
                     child_keys = parser.get_keys(child, child_keys, active_options, filetree_table) # Get the rest of the keys from the pytube object
@@ -152,11 +154,12 @@ class YouMirror:
                     files = child_keys["files"]             # Get the files from the keys
                     for file in files:
                         filetree_table[file] = {"type": "file"}
-                        logging.info(f"Adding {file} to the database")
-                    
+                        logging.info(f"Adding {file} to the database")                                    
 
 
 
+        for item in to_download:
+            pass
         # If not dry_run, download the video(s)
             # If not forced, report how much downloading there is to do and ask for confirmation
 
