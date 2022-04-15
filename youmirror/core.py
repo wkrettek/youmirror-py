@@ -57,9 +57,9 @@ class YouMirror:
             root = self.root
         path = Path(root)
         # Config setup
-        config_path = helper.get_path(root, self.config_file)   # Get the config file & ensure it exists
-        db_path = helper.get_path(root, self.db)                # Get the db file & ensure it exists
-        if not helper.verify_config(config_path):               # Verify the config file   
+        config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
+        db_path = path/Path(self.db)                # Get the db file & ensure it exists
+        if not config_path.is_file():                           # Verify the config file exists   
             logging.error(f'Could not find config file in root directory \'{path}\'')
             return
         # Load the config
@@ -115,26 +115,29 @@ class YouMirror:
             table = string_to_table[yt_string]  # Get the appropriate table for the object
             table[id] = keys                    # Add the item to the database
 
-            if "children" in keys:          # If any children appeared when we got keys
+            item_path = keys["path"]            # Get the calculated path from the keys
+            filetree_table[item_path] = {"type": "path"}      # Record the path in the filetree table
+
+            if "children" in keys:              # If any children appeared when we got keys
             # if children := parser.get_children(item):   # If there are any children
                 for child in keys["children"]:
 
                     # Get parent info        
                     parent_id = parser.get_id(item)     # Get parent's id
                     parent_name = parser.get_name(item) # Get parent's name
-                    child_keys = {"parent_id": parent_id, "parent_name": parent_name} # passing this to get_keys()
+                    child_keys = {"parent_id": parent_id, "parent_name": parent_name, "path": item_path} # passing this to get_keys()
 
                     child = parser.get_pytube(child)    # Wrap those children in pytube objects
                     child_id = parser.get_id(child)     # Get the id for the single
 
                     child_keys = parser.get_keys(child, child_keys, active_options, filetree_table) # Get the rest of the keys from the pytube object
                     print(f'Adding child {child_id} and {child_keys} to singles table')
-                    singles_table[child_id] = child_keys            # Add child to the database
+                    singles_table[child_id] = child_keys                                            # Add child to the database
 
 
 
         # If not dry_run, download the video(s)
-            # If not forced, report how much downloading there is to do
+            # If not forced, report how much downloading there is to do and ask for confirmation
 
         # Update config file
         configurer.save_config(config_path, self.config)

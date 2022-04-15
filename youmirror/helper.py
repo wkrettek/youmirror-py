@@ -56,11 +56,8 @@ but the first one is better for keeping things more condensed. And if you just d
 ------------------
 I think I can implement an "export" command later on to use the db to export things that are grouped together. Sucks if your db gets corrupted, but oh well
 '''
-
-import youmirror.parser as parser
 from pathlib import Path
 import logging
-from typing import Union
 
 
 def get_path(path : str, filename : str) -> Path:
@@ -136,6 +133,12 @@ def calculate_filename(name: str, extension: str) -> str:
         return filename
     except Exception as e:
         return None
+
+def calculate_filepaths() -> list[str]:
+    '''
+    Calculates what filepaths apply to a given 
+    '''
+
 
 def verify_installation(filepath: Path) -> bool:
     '''

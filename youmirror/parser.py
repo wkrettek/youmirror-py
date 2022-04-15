@@ -155,7 +155,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: str, fi
                 name
                 children
                 available
-                path
+                paths
             Playlists
                 id
                 name
@@ -172,6 +172,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: str, fi
     You can pass in a dict if you want to inject some values from above
     This is going to be a heavy function that calls from a lot of places. It's calculating a lot of things
     '''
+    dl = options["dl_video"]
     if isinstance(yt, Channel):
         keys["name"] = yt.channel_name
         children = get_children(yt)
@@ -193,9 +194,8 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: str, fi
         # keys["parent"] = if "parent" in keys               # Singles will only get here if there is no parent
                                             # If there is a parent, we will add it later
         keys["available"] = is_available(yt)
-        keys["path"] = helper.calculate_path(yt)
-        keys["captions"] = configurer.get_captions("")    # Get the captions we want to download for this video
-        keys["filename"] = helper.calculate_filename(yt)
+        keys["path"] = 
+        keys["files"] = helper.calculate_filepaths(yt)
 
         return keys
     else: 
