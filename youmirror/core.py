@@ -267,16 +267,19 @@ class YouMirror:
         '''
         pass
 
-    def show(
-        self
-        ) -> None:
+    def show(self, root: str) -> None:
         '''
         Prints the current state of the mirror
         '''
+
+        if not root:
+            root = self.root
+
         # Load the config
-        self.config = configurer.load_config(self.config_file)
+        config_path = Path(root)/Path(self.config_file)   # Get the config file & ensure it exists
+        self.config = configurer.load_config(config_path)
         if not self.config:
-            print(f"Could not load config file in root directory {self.root}")
+            print(f"Could not load config file in root directory {root}")
             return
 
         # Print the config

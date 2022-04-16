@@ -62,12 +62,12 @@ def check():
     print('check called')
 
 @app.command()
-def show():
+def show(root: str = typer.Argument(None)):
     '''
     Shows the state of the mirror
     '''
     ym = YouMirror()
-    ym.show()
+    ym.show(root)
 
 if __name__ == "__main__":
     main()

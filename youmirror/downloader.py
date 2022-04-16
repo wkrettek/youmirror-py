@@ -13,6 +13,8 @@ file_types = {"video", "caption", "audio", "thumbnail"}
 def get_stream(yt: YouTube, file_type: str, options: dict) -> Stream:
     '''
     Applies all the filters and gets a stream object
+    # TODO this implements a fix that is not in pytube right now so it is in my wkrettek repo,
+    Need to implement myself until pytube is updated
     '''
     only_audio = False
     if file_type == "audio":
@@ -47,6 +49,8 @@ def download_video(yt: YouTube, filepath: str, options: dict) -> None:
 def download_caption(yt: YouTube, filepath: str, options: dict) -> str:
     '''
     Gets the captions from the video and downloads them
+    # TODO This implements a uses a fix that is not in pytube right now so it is in my wkrettek repo
+    Probably should just implement it in this library until pytube is updated
     '''
     # TODO handle for different languages
     file_type = "caption"
