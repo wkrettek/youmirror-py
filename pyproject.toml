@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "youmirror"
-version = "0.2.0"
+version = "0.3.0"
 description = "Create a mirror filetree of your favorite youtube videos"
 authors = ["wkrettek <warrenkrettek@gmail.com>"]
 license = "MIT"

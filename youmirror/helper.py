@@ -52,8 +52,7 @@ Lets' call this the 'wide' implementation
             | -- playlists
             | -- singles
 ------------------
-The second one is better for the stuff I want to do with this project later on (files of the same type are all under one tree),
-but the first one is better for keeping things more condensed. And if you just download videos, like most people do, you'll just see one folder inside the root, which is always annoying AF to me
+I think for now I will implement the 'tall' implementation because it keeps things altogether. I may add an option to switch between the two later
 ------------------
 I think I can implement an "export" command later on to use the db to export things that are grouped together. Sucks if your db gets corrupted, but oh well
 '''

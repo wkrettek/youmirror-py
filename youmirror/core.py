@@ -8,6 +8,13 @@ from typing import Union  # For typing
 from pytube import YouTube, Channel, Playlist
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
 
+'''
+This is the core module
+------
+# TODO I think some asyncio could be implemented here when collecting data
+from the videos and waiting for youtube to respond. There might be other async
+optimizations I'm not seeing too
+'''
 
 logging.basicConfig(level=logging.INFO)
 
@@ -154,7 +161,11 @@ class YouMirror:
 
 
         for item in to_download:
-            pass
+            id = parser.get_id(item)
+            files = singles_table[id]["files"]
+            for file in files:
+                if not Path(file).exists():
+                    downloader.download_single(item, file, active_options)
         # If not dry_run, download the video(s)
             # If not forced, report how much downloading there is to do and ask for confirmation
 
@@ -174,7 +185,7 @@ class YouMirror:
         if not root:
             root = self.root
         path = Path(root)
-        # Config setup
+        # Get config
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
         if not helper.verify_config(config_path):               # Verify the config file   
             logging.error(f'Could not find config file in root directory \'{config_path}\'')
@@ -293,16 +304,16 @@ class YouMirror:
             item = channel[yt]
             name = item['name']
             url = item['url']
-            print(f"Channel: - name: {name} - url: {url} -")
+            print(f"channel - {name} - {url} -")
 
         for yt in playlist:
             item = playlist[yt]
             name = item['name']
             url = item['url']
-            print(f"Playlist: - name: {name} - url: {url} -")
+            print(f"playlist - {name} - {url} -")
 
         for yt in single:
             item = single[yt]
             name = item['name']
             url = item['url']
-            print(f"Single: - name: {name} - url: {url} -")
+            print(f"single - {name} - {url} -")

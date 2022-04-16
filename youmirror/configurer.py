@@ -129,7 +129,6 @@ def save_config(config_path: Path, config: dict) -> Path:
     try:
         if config_path.is_file():                      # Check if the file exists     
             toml_string = toml.dumps(config)           # Convert the config to a toml string
-            print("Current config: \n" + toml_string)      # Print the new config ----- Remove later
             config_path.open('w').write(toml_string)   # Write the toml string to the config file
         else:
             logging.error(f"Config file {config_path} does not exist")

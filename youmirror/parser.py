@@ -1,12 +1,16 @@
 '''
 This module parses youtube urls, wraps them in pytube objects and 
 pulls information from pytube objects
+---
+TODO I want to create pytube objects in the core later on because they take
+a little bit to initialize and if a video goes down I'm not sure you'll be able
+to create one again. Right now I'm using pytube objects to get my id,
+but I'll need to implement my own regex to get the id from a url instead of
+using pytube's
 '''
-from sys import meta_path
 from pytube import YouTube, Channel, Playlist
 from typing import Union, Callable, Any
 import youmirror.helper as helper
-import youmirror.configurer as configurer
 import logging
 
 yt_type_to_string = {Channel: "channel", Playlist: "playlist", YouTube: "single"}    # Translation dict for convenience
