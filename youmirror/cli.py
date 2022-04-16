@@ -85,7 +85,14 @@ def config(root: str = typer.Argument(None)):
     '''
     Allows you edit the config file
     '''
-    pass    
+    pass  
+
+@app.command()
+def archive(root: str = typer.Argument(None)):
+    '''
+    Uploads the mirror to the internet archive
+    '''
+    pass
 
 if __name__ == "__main__":
     main()

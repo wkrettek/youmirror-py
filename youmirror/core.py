@@ -196,10 +196,12 @@ class YouMirror:
             return
         if not db_path.is_file():                               # Verify the database file exists
             logging.error(f'Could not find database file in root directory \'{path}\'')
-        # Load the config
+        self.config = configurer.load_config(config_path)       # Load the config file
         
         # Parse the url & create pytube object
-        yt_string = parser.link_type(url)   # Get the url type (channel, playlist, single)
+        if not (yt_string := parser.link_type(url)):   # Get the url type (channel, playlist, single)
+            logging.error(f'Invalid url \'{url}\'')
+            return
         yt = parser.get_pytube(url)         # Get the proper pytube object
         id = parser.get_id(yt)              # Get the id for the object
 
@@ -223,6 +225,7 @@ class YouMirror:
         to_remove = list[str]()             # List of filepaths to delete
         if id in table:
             if "children" in table[id]:
+                pass
 
 
         # If it has children, collect those too
@@ -337,3 +340,11 @@ class YouMirror:
             name = item['name']
             url = item['url']
             print(f"single - {name} - {url} -")
+
+    def archive(self, root: str) -> None:
+        '''
+        Uploads the mirror to the internet archive
+        TODO will add internetarchive as an optional dependency later on
+        if/when this gets implemented
+        '''
+        pass
