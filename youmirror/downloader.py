@@ -28,7 +28,6 @@ def download_stream(stream: Stream, path: str, filename: str, options: dict) -> 
     '''
     filename = filename + ".mp4"
     stream.download(output_path=path, filename=filename) # Download to the appropriate path and name
-    print(f'Output path = {path} and filename = {filename}, suffix = {".mp4"}')
     return True
 
 def download_video(yt: YouTube, path: str, filename: str, options: dict) -> None:

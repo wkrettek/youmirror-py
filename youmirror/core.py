@@ -100,11 +100,11 @@ class YouMirror:
         yt_string = parser.yt_to_type_string(yt)                # Get the yt type string
         if configurer.yt_exists(yt_string, id, self.config):
             logging.info(f"{url} already exists in the mirror")
-            return                                              # End command here. TODO: remove this if we add the ability to do multiple URLS
+            return                                              # End command here if the url is already in the mirror
         else:
             logging.info(f"Adding {url} to the mirror")
-            self.config[yt_string][id] = specs                  # For testing we do this
-            # configurer.add_yt(yt_string, id, self.config, specs)       # Add the url to the config
+            self.config[yt_string][id] = specs                  # TODO doing it directly for now, but we should go through the configurer
+            # configurer.add_yt(yt_string, id, self.config, specs)       # Add the url to the config # TODO TODO TODO
             to_add.append(yt)                                            # Mark it for adding
 
         # Open the database tables
@@ -187,37 +187,38 @@ class YouMirror:
         path = Path(root)
         # Get config
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
-        if not helper.verify_config(config_path):               # Verify the config file   
+        self.config = configurer.load_config(config_path)
+        if not self.config:                         # Load the config file   
             logging.error(f'Could not find config file in root directory \'{config_path}\'')
             return     
-        self.config = configurer.load_config(config_path)
-
+        
         # Parse the url & create pytube object
-        url_type = parser.link_type(url)           # Get the url type (channel, playlist, single)
-        # TODO                                  # Verify the url is valid
-        yt = parser.get_pytube(url)       # Get the proper pytube object
-
-        # Collect the specs
-        try:
-            id = parser.get_id(yt)                  # Get the id of the pytube object
-            # name = parser.get_name(yt)              # Get the name of the pytube object
-            # url = parser.get_url(yt)                # Get the url of the pytube object
-        except Exception as e:
-            logging.exception(f"Failed to collect specs from url error: {e}")
+        yt_string = parser.link_type(url)           # Get the url type (channel, playlist, single)
 
         # Check if the id is already in the config
-        if configurer.id_exists(id, url_type, self.config):
+        if configurer.yt_exists(yt_string, id, self.config):
             logging.info(f"Removing {url} from the mirror")
-            # Remove the url from the config
-            configurer.remove_item(id, self.config)
         else:
-            logging.info(f"{url} not found in the mirror")
+            logging.info(f"Could not find {url} not found in the mirror")
+            return
 
-        # Delete files
+        yt = parser.get_pytube(url)       # Get the proper pytube object
+
+        # Open the database tables
+        # Find the id in the database
+        # If it has children, collect those too
+        # Get all the files and paths
+        # Unlink all
+
+        # Delete all the ids from the database
+
+        # Commit to the database
 
         # Clear database
 
         # Update config file
+        del self.config[yt_string][id]                  # TODO doing it directly for now, but we should go through the configurer
+        # configurer.remove_yt(yt_string, id, self.config, specs)       # Add the url to the config # TODO TODO TODO
         configurer.save_config(config_path, self.config)
 
     
