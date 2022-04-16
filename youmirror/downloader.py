@@ -38,7 +38,7 @@ def download_video(yt: YouTube, path: str, filename: str, options: dict) -> None
         stream = get_stream(yt, "video", options)     # Get stream with applied filters
         download_stream(stream, path, filename, options)
     except Exception as e:
-        logging.exception(f'Could not download video at {path + filename}')
+        logging.exception(f'Could not download video at {str(path) + filename}')
 
 def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> str:
     '''
@@ -48,8 +48,8 @@ def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> st
     '''
     # TODO handle for different languages
     captions = yt.caption_tracks
-    for c in captions:
-        c.download(output_path=path, title=filename+str(c.__repr__()))
+    for i, c in enumerate(captions):
+        c.download(output_path=path, title=filename+str(i)) # Adding the index to the filename for now
     return filename
 
 def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
@@ -70,7 +70,9 @@ def download_thumbnail(yt: YouTube, path: str, filename: str, options: dict) -> 
     '''
     try:
         url = yt.thumbnail_url  # For now, pytube can only get the url for a thumbnail
-        filepath = Path(path)/Path(filename)            # Add the path and filename
+        path = Path(path)       # Wrap the path
+        path.mkdir(parents=True, exist_ok=True)    # Make the directory if it doesn't exist
+        filepath = path/Path(filename)            # Add the path and filename
         filename: Path = filepath.with_suffix(".jpg")   # Add the extension for the thumbnail
         filename.touch()                                # Create the file if it doesn't already exist
         urlretrieve(url, filename=filename)             # Download to filename
