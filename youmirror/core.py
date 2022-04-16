@@ -77,11 +77,12 @@ class YouMirror:
         global_options = configurer.get_options("youmirror", self.config)   # Get global options
         active_options.update(global_options)                               # Overwrite with globals
         # active_options.update(kwargs)                                     # Overwrite with command line options
-        print("Active options:", active_options)
+        logging.debug("Active options:", active_options)
 
         # Parse the url & create pytube object
         try:
-            url_type = parser.link_type(url)        # Get the url type (channel, playlist, single)
+            if not(url_type := parser.link_type(url)):       # Get the url type (channel, playlist, single)
+                return
             yt = parser.get_pytube(url)             # Get the proper pytube object
         except Exception as e:
             logging.exception(f"Could not parse url {url} due to {e}")
@@ -136,13 +137,13 @@ class YouMirror:
                 item_path = item_path.split("/")[1:]            # Split the first bit off
                 item_path = "/".join(item_path)                 # Join the list back together
                 filetree_table[item_path] = {"type": "path"}    # Record the path in the filetree table
-            # if children := parser.get_children(item):   # If there are any children
-                for child in parser.get_children(item):   # We have to get the children again to get urls instead of ids :/
 
-                    # Get parent info        
-                    parent_id = parser.get_id(item)     # Get parent's id
-                    parent_name = parser.get_name(item) # Get parent's name
-                    child_keys = {"parent_id": parent_id, "parent_name": parent_name, "path": item_path} # passing this to get_keys()
+                # Get parent info to pass to children   
+                parent_id = parser.get_id(item)     # Get parent's id
+                parent_name = parser.get_name(item) # Get parent's name
+                child_keys = {"parent_id": parent_id, "parent_name": parent_name, "parent_type": yt_string, "path": item_path}       # passing this to get_keys()
+
+                for child in parser.get_children(item):   # We have to get the children again to get urls instead of ids :/
 
                     child = parser.get_pytube(child)    # Wrap those children in pytube objects
                     to_download.append(child)           # Mark this YouTube object for downloading
@@ -156,22 +157,19 @@ class YouMirror:
                     files = child_keys["files"]             # Get the files from the keys
                     for file in files:
                         filetree_table[file] = {"type": "file"}
-                        logging.info(f"Adding {file} to the database")                                    
-
-
-
-        for item in to_download:
-            id = parser.get_id(item)
-            files = singles_table[id]["files"]
-            for file in files:
-                if not Path(file).exists():
-                    downloader.download_single(item, file, active_options)
-        # If not dry_run, download the video(s)
-            # If not forced, report how much downloading there is to do and ask for confirmation
+                        logging.info(f"Adding {file} to the database")  
 
         # Update config file
-        configurer.save_config(config_path, self.config)
+        configurer.save_config(config_path, self.config)                                  
 
+        # If not forced, report how much downloading there is to do and ask for confirmation
+        if not kwargs.get("dry_run", False):    # Check for a dry run
+            for item in to_download:            # Search through all the pytube objects we want to download
+                id = parser.get_id(item)        # Get the id
+                files = singles_table[id]["files"]  # Get the files from the database
+                for file in files:                  # Search through all the files
+                    if not Path(file).exists():     # If the file doesn't exist
+                        downloader.download_single(item, file, active_options) # Download it
 
     def remove(
         self,

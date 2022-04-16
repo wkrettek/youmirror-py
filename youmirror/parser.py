@@ -187,6 +187,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, f
             Singles
                 id
                 name
+                type    Parent type
                 parent
                 available
                 files
@@ -227,6 +228,10 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, f
         keys.update(metadata)
         if "parent_name" not in keys:
             keys["parent_name"] = ""
+        if "parent_type" not in keys:
+            keys["parent_type"] = "single"
+        else:
+            yt_string = keys["parent_type"]     # We are resetting the type to the parent type
         yt_id = get_id(yt)
         keys["files"] = set()
         for file_type in to_download:

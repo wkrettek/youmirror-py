@@ -1,7 +1,7 @@
 __all__ = ['app', 'sync', 'add', 'remove', 'check', 'main', '__main__']
 
 import typer
-from typing import Optional, List
+from typing import Optional
 from youmirror.core import YouMirror
 
 app = typer.Typer()
@@ -12,21 +12,18 @@ def main():
 
 @app.command()
 def sync(
-    config_file : List[str] = typer.Argument(None),
+    url : str,
+    root : str = typer.Argument(None),
     dry_run : Optional[bool] = typer.Option(False)
     ):
     '''
-    Uses a config file to sync the file tree to Youtube's videos
+    Syncs the filetree to the database
     '''
-    print('sync called')
     print(f'Dry run is {dry_run}')
     return
 
 @app.command()
-def new(
-    root : str = typer.Argument("./YouMirror/"),
-    config_file: str = 'youmirror.json'
-    ):
+def new(root : str = typer.Argument(None)):
     '''
     Create a new config file from the template
     '''
@@ -36,30 +33,40 @@ def new(
 
 @app.command()
 def add(
-    url : str = typer.Argument(None),
-    root : str = typer.Argument("."),
+    url : str,
+    root : Optional[str] = typer.Argument(None, help='Root directory to add to'),
+    # dl_off : Optional[bool] = typer.Option(False, help='Change the config file and database but do not download anything'),
+    dry_run : Optional[bool] = typer.Option(default=False, help="Only calculate the changes")
     ):
     '''
-    Adds the specified channel, playlist, or single to the config file and downloads
+    Adds the url to the mirror
     '''
+    kwargs = {"dry_run": dry_run}
     yt = YouMirror()
-    yt.add(url)
+    yt.add(url, root, **kwargs)
     return
 
 @app.command()
 def remove():
     '''
-    Removes the specified channel, playlist, or single from the config file and downloads
+    Removes the specified link from the mirror and deletes all files
     '''
-    print('remove called')
     return
 
 @app.command()
 def check():
     '''
-    Checks the database to see if any mirrored files are no longer supported by Youtube
+    Checks the database to see if any mirrored files are no longer supported by Youtube.
+    Generally updates metadata
     '''
-    print('check called')
+    return
+
+@app.command()
+def update(root : str = typer.Argument(None)):
+    '''
+    Checks if new files were added to channels or playlists and downloads them
+    '''
+    return
 
 @app.command()
 def show(root: str = typer.Argument(None)):
@@ -68,6 +75,13 @@ def show(root: str = typer.Argument(None)):
     '''
     ym = YouMirror()
     ym.show(root)
+
+@app.command()
+def config(root: str = typer.Argument(None)):
+    '''
+    Allows you edit the config file
+    '''
+    pass    
 
 if __name__ == "__main__":
     main()
