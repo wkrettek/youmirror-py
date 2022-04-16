@@ -61,5 +61,13 @@ def check():
     '''
     print('check called')
 
+@app.command()
+def show():
+    '''
+    Shows the state of the mirror
+    '''
+    ym = YouMirror()
+    ym.show()
+
 if __name__ == "__main__":
     main()

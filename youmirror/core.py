@@ -1,17 +1,12 @@
-from distutils.command.config import config
 import youmirror.parser as parser
 import youmirror.downloader as downloader
 import youmirror.helper as helper
 import youmirror.configurer as configurer
 import youmirror.databaser as databaser
 import logging                      # Logging
-from typing import Optional, Union  # For typing
-from urllib import parse
-from sqlitedict import SqliteDict   # Databasing
-import toml                         # Configuring # TODO move to configurer
+from typing import Union  # For typing
 from pytube import YouTube, Channel, Playlist
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
-from tqdm import tqdm       # Progress bar
 
 
 logging.basicConfig(level=logging.INFO)
@@ -243,27 +238,26 @@ class YouMirror:
         # if not databaser.table_exists(conn, 'singles'):
         #     databaser.create_table(conn, 'singles')
         # Mark singles for download
-        singles = SqliteDict(self.dbpath, tablename='singles', autocommit=True)
-        for single in self.singles:
-            # Compare against database
-            url = single['url']
-            key = parse.quote_plus(url)
-            print(single)
-            if key not in singles:
-                to_download.append(single)
+        # singles = SqliteDict(self.dbpath, tablename='singles', autocommit=True)
+        # for single in self.singles:
+        #     # Compare against database
+        #     url = single['url']
+        #     print(single)
+        #     if key not in singles:
+        #         to_download.append(single)
 
-        print(f"{len(to_download)} Videos to download")
-        # Download videos
+        # print(f"{len(to_download)} Videos to download")
+        # # Download videos
         
-        if len(to_download) > 0:
-            print("Downloading videos...")
-            for video in tqdm(to_download):
-                output_path = self.root + 'singles/'    # Set to the single path
-                url = video['url']                      # Get the url      
-                filepath = downloader.download_video(url=url, output_path=output_path)
-                # Add to database
-                key = parse.quote_plus(url)             # Make the key good for sqlite    
-                singles[key] = {"url": url, "filepath": filepath}   # Add to sqlite
+        # if len(to_download) > 0:
+        #     print("Downloading videos...")
+        #     for video in to_download:
+        #         output_path = self.root + 'singles/'    # Set to the single path
+        #         url = video['url']                      # Get the url      
+        #         filepath = downloader.download_video(url=url, output_path=output_path)
+        #         # Add to database
+        #         key = parse.quote_plus(url)             # Make the key good for sqlite    
+        #         singles[key] = {"url": url, "filepath": filepath}   # Add to sqlite
 
     def check(
         self
@@ -279,4 +273,33 @@ class YouMirror:
         '''
         Prints the current state of the mirror
         '''
-        pass
+        # Load the config
+        self.config = configurer.load_config(self.config_file)
+        if not self.config:
+            print(f"Could not load config file in root directory {self.root}")
+            return
+
+        # Print the config
+        channel = self.config['channel']
+        playlist = self.config['playlist']
+        single = self.config["single"]
+        print(f'TYPE --- NAME --- URL')
+        print(f'-'* 30)
+
+        for yt in channel:
+            item = channel[yt]
+            name = item['name']
+            url = item['url']
+            print(f"Channel: - name: {name} - url: {url} -")
+
+        for yt in playlist:
+            item = playlist[yt]
+            name = item['name']
+            url = item['url']
+            print(f"Playlist: - name: {name} - url: {url} -")
+
+        for yt in single:
+            item = single[yt]
+            name = item['name']
+            url = item['url']
+            print(f"Single: - name: {name} - url: {url} -")

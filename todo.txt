@@ -1,9 +1,18 @@
+cli
+    add
+        be able to add multiple urls
+        can specify dry run
+    show
+        show current state of database
+            list all [1] 
+    
+printer
+    [1] show name, type, url, num children, size
+
 Parser
     Be able to rip all the metadata
         Somehow rip just enough not to cause any errors.. I guess just skip metadata we can't get that's not crucial
     for get_keys():
-        Wrap up ripping metadata into a function
-        generate filename is definitely a helper thing
         resolve collision is maybe a database thing?
 Helper
     Can I rename this thing??

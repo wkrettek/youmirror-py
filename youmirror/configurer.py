@@ -114,8 +114,11 @@ def load_config(config_path: str) -> dict:
     Loads the config file and returns as a dictionary
     '''
     try:
-        config = toml.load(open(config_path))   # Dictionary from the config file
-        return config
+        if Path(config_path).is_file():
+            config = toml.load(open(config_path))   # Dictionary from the config file
+            return config
+        else:
+            return None
     except Exception as e:
         logging.exception(f"Could not load config file {config_path} due to {e}")
 
