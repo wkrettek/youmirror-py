@@ -4,7 +4,7 @@ cli
         can specify dry run
     show
         show current state of database
-            list all [1] 
+            [1] list all channels, playlists, 
     
 printer
     [1] show name, type, url, num children, size
@@ -16,6 +16,7 @@ Parser
         resolve collision is maybe a database thing?
 Helper
     Can I rename this thing??
+    --- I changed the filetree type back to tall by default
 Databaser
     Wrap up the databasing as much as possible to abstract it from database implementation
         using sqlitedict for now

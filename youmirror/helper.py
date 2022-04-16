@@ -1,7 +1,8 @@
 __all__ = [""]
 
 '''
-This module manages the filetree
+This module manages the filetree, I don't really know why it's called helper
+but I like all the -er names for modules so here we are
 ------
 This is the second most important module in the project, it must be able to 
 generate the paths and filenames that make up the project with the given options
@@ -100,12 +101,14 @@ def calculate_path(file_type: str, yt_type: str, parent_name) -> str:
     # File type comes from options
     # Parent type comes from yt type
     # Parent name comes from yt name
-
+    filetree_type = "tall"  # TODO THIS SHOULD BE PASSED FROM CONFIGS WHEN IMPLEMENTED
     yt_types = {"channel": "channels","playlist": "playlists", "single": "singles"}         # Valid parent types
     if yt_type in yt_types:             # Check the yt_type is valid
-        yt_type = yt_types[yt_type] # Yes I know this is dumb but I need to make it plural for formatting reasons
-    
-    path = Path(file_type)/Path(yt_type)/Path(parent_name)  # Build the filepath
+        yt_type = yt_types[yt_type]     # Yes I know this is dumb but I need to make it plural for formatting reasons
+    if filetree_type == "tall":
+        path = Path(yt_type)/Path(parent_name)/Path(file_type)  # Build the filepath
+    else:
+        path = Path(file_type)/Path(yt_type)/Path(parent_name)
     return  str(path)
 
 def calculate_filename(file_type: str, yt_name: str) -> str:
@@ -117,8 +120,8 @@ def calculate_filename(file_type: str, yt_name: str) -> str:
     # Parent name comes from yt name
     file_type_to_extension = {"videos": ".mp4", "captions": ".srt", "audio": ".mp3", "thumbnails": ".jpg"}
     if file_type in valid_file_types:
-        extension = file_type_to_extension[file_type]
-        filename = f"{yt_name}{extension}"
+        extension = file_type_to_extension[file_type]   # Convert the file type to an extension
+        filename = f"{yt_name}{extension}"              # Add the name and extension together
         return filename
     else:
         logging.error(f"Invalid file type {file_type} passed") 
