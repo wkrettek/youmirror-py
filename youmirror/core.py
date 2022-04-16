@@ -144,16 +144,18 @@ class YouMirror:
                 # Get parent info to pass to children   
                 parent_id = parser.get_id(item)     # Get parent's id
                 parent_name = parser.get_name(item) # Get parent's name
-                child_keys = {"parent_id": parent_id, "parent_name": parent_name, "parent_type": yt_string, "path": item_path}       # passing this to get_keys()
 
                 for child in parser.get_children(item):   # We have to get the children again to get urls instead of ids :/
+
+                    child_keys = {"parent_id": parent_id, "parent_name": 
+                    parent_name, "parent_type": yt_string, "path": item_path}       # passing this to get_keys()
 
                     child = parser.get_pytube(child)    # Wrap those children in pytube objects
                     to_download.append(child)           # Mark this YouTube object for downloading
                     child_id = parser.get_id(child)     # Get the id for the single
 
                     child_keys = parser.get_keys(child, child_keys, active_options, filetree_table) # Get the rest of the keys from the pytube object
-                    print("Child keys:", child_keys)
+                    # print("Child keys:", child_keys)
                     print(f'Adding child {child_id} and {child_keys} to singles table')
                     singles_table[child_id] = child_keys    # Add child to the database
                     logging.info(f"Adding {child} to the database")
@@ -172,6 +174,7 @@ class YouMirror:
                 files = singles_table[id]["files"]  # Get the files from the database
                 for file in files:                  # Search through all the files
                     if not Path(file).exists():     # If the file doesn't exist
+                        file = str(path/Path(file)) # Inject the root that was passed from the add() function call
                         downloader.download_single(item, file, active_options) # Download it
 
     def remove(

@@ -49,7 +49,7 @@ def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> st
     # TODO handle for different languages
     captions = yt.caption_tracks
     for c in captions:
-        c.download(output_path=path, title=filename)
+        c.download(output_path=path, title=filename+str(c.__repr__()))
     return filename
 
 def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
@@ -70,11 +70,12 @@ def download_thumbnail(yt: YouTube, path: str, filename: str, options: dict) -> 
     '''
     try:
         url = yt.thumbnail_url  # For now, pytube can only get the url for a thumbnail
-        filepath = str(Path(path)/Path(filename))
-        filename = filepath + ".jpg"
-        urlretrieve(url, filename=filename)
+        filepath = Path(path)/Path(filename)            # Add the path and filename
+        filename: Path = filepath.with_suffix(".jpg")   # Add the extension for the thumbnail
+        filename.touch()                                # Create the file if it doesn't already exist
+        urlretrieve(url, filename=filename)             # Download to filename
     except Exception as e:
-        logging.exception(f'Could not download thumbnail at {path + filename}')
+        logging.exception(f'Could not download thumbnail at {filename}')
     # TODO implement a way to download the url, probably copy however pytube manages to do it without dependencies
 
 def download_single(yt: YouTube, filepath: str, options: dict) -> None:
