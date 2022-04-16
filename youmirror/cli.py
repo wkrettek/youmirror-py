@@ -47,11 +47,15 @@ def add(
     return
 
 @app.command()
-def remove():
+def remove(
+    url : str,
+    root : Optional[str] = typer.Argument(None, help='Root directory to remove from'),
+    ):
     '''
     Removes the specified link from the mirror and deletes all files
     '''
-    return
+    ym = YouMirror()
+    ym.remove(url, root)
 
 @app.command()
 def check():

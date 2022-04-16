@@ -3,10 +3,11 @@ import youmirror.downloader as downloader
 import youmirror.helper as helper
 import youmirror.configurer as configurer
 import youmirror.databaser as databaser
-import logging                      # Logging
-from typing import Union  # For typing
+import logging              # Logging
+from typing import Union    # For typing
 from pytube import YouTube, Channel, Playlist
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
+import shutil               # For removing whole directories     
 
 '''
 This is the core module
@@ -66,6 +67,8 @@ class YouMirror:
         if not config_path.is_file():                           # Verify the config file exists   
             logging.error(f'Could not find config file in root directory \'{path}\'')
             return
+        if not db_path.is_file():                               # Verify the database file exists
+            logging.error(f'Could not find database file in root directory \'{path}\'')
         # Load the config
         try:
             self.config = configurer.load_config(config_path)
@@ -182,16 +185,23 @@ class YouMirror:
         """
         if not root:
             root = self.root
+
+        # Config setup
         path = Path(root)
-        # Get config
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
-        self.config = configurer.load_config(config_path)
-        if not self.config:                         # Load the config file   
-            logging.error(f'Could not find config file in root directory \'{config_path}\'')
-            return     
+        db_path = path/Path(self.db)                # Get the db file & ensure it exists
+
+        if not config_path.is_file():                           # Verify the config file exists   
+            logging.error(f'Could not find config file in root directory \'{path}\'')
+            return
+        if not db_path.is_file():                               # Verify the database file exists
+            logging.error(f'Could not find database file in root directory \'{path}\'')
+        # Load the config
         
         # Parse the url & create pytube object
-        yt_string = parser.link_type(url)           # Get the url type (channel, playlist, single)
+        yt_string = parser.link_type(url)   # Get the url type (channel, playlist, single)
+        yt = parser.get_pytube(url)         # Get the proper pytube object
+        id = parser.get_id(yt)              # Get the id for the object
 
         # Check if the id is already in the config
         if configurer.yt_exists(yt_string, id, self.config):
@@ -200,10 +210,21 @@ class YouMirror:
             logging.info(f"Could not find {url} not found in the mirror")
             return
 
-        yt = parser.get_pytube(url)       # Get the proper pytube object
-
         # Open the database tables
+        channels_table = databaser.get_table(db_path, "channels")
+        playlists_table = databaser.get_table(db_path, "playlists")
+        singles_table = databaser.get_table(db_path, "singles")
+        filetree_table = databaser.get_table(db_path, "filetree")
+
+        string_to_table = {"channel": channels_table, "playlist": playlists_table, "single": singles_table}  # Translation dict for pytube type to db table
         # Find the id in the database
+        table = string_to_table[yt_string]  # Get the appropriate table for the object
+
+        to_remove = list[str]()             # List of filepaths to delete
+        if id in table:
+            if "children" in table[id]:
+
+
         # If it has children, collect those too
         # Get all the files and paths
         # Unlink all
