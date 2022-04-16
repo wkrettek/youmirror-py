@@ -108,7 +108,6 @@ def remove_yt(table: SqliteDict, filetree: SqliteDict):
     '''
     pass
 
-
 def set_files(table: SqliteDict, id: str, files: dict) -> dict:
     '''
     Sets the files dictionary in the id and returns the files that were set

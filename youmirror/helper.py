@@ -14,21 +14,22 @@ Let's call this the 'tall' implementation
    Root
     | -- channels
             | -- channel name
-                    | -- videos
-                    | -- captions
-                    | -- audio
-                    | -- thumbnails
+                    | -- single name
+                            | -- video file
+                            | -- caption file
+                            | -- audio file
+                            | -- thumbnail file
     | -- playlists
             | -- playlist name
-                    | -- videos
-                    | -- captions
-                    | -- audio
-                    | -- thumbnails
+                    | -- single name
+                            | -- video file
+                            | -- caption file
+                            | -- audio file
+                            | -- thumbnail file
     | -- singles
-            | -- videos
-            | -- captions
-            | -- audio
-            | -- thumbnails
+            | -- single name
+                    | -- video file
+                        
 
 ----- or -----
 Lets' call this the 'wide' implementation

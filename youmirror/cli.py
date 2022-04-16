@@ -94,5 +94,13 @@ def archive(root: str = typer.Argument(None)):
     '''
     pass
 
+@app.command()
+def play(root: str = typer.Argument(None)):
+    '''
+    Plays the video or something
+    '''
+    pass
+
+
 if __name__ == "__main__":
     main()

@@ -65,10 +65,10 @@ class YouMirror:
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
         db_path = path/Path(self.db)                # Get the db file & ensure it exists
         if not config_path.is_file():                           # Verify the config file exists   
-            logging.error(f'Could not find config file in root directory \'{path}\'')
+            logging.error(f'Could not find config file in directory \'{path}\'')
             return
         if not db_path.is_file():                               # Verify the database file exists
-            logging.error(f'Could not find database file in root directory \'{path}\'')
+            logging.error(f'Could not find database file in directory \'{path}\'')
         # Load the config
         try:
             self.config = configurer.load_config(config_path)
@@ -316,7 +316,7 @@ class YouMirror:
         config_path = Path(root)/Path(self.config_file)   # Get the config file & ensure it exists
         self.config = configurer.load_config(config_path)
         if not self.config:
-            print(f"Could not load config file in root directory {root}")
+            print(f"Could not load config file in directory \'{root}\'")
             return
 
         # Print the config

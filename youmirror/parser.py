@@ -200,7 +200,9 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, f
         "captions": options["dl_captions"], 
         "thumbnails": options["dl_thumbnail"]
     }
+
     yt_string = yt_to_type_string(yt)   # Get the type as a string
+
     if yt_string == "channel":
         metadata = get_metadata(yt)
         keys.update(metadata)
@@ -212,6 +214,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, f
                 path = helper.resolve_collision(path, filetree, yt_id)
                 keys["paths"].add(path)
         return keys
+
     elif yt_string == "playlist":
         metadata = get_metadata(yt)
         keys.update(metadata)
@@ -223,7 +226,9 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, f
                 path = helper.resolve_collision(path, filetree, yt_id)
                 keys["paths"].add(path)
         return keys
+
     elif yt_string == "single":
+
         metadata = get_metadata(yt)
         keys.update(metadata)
         if "parent_name" not in keys:
@@ -234,6 +239,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, f
             yt_string = keys["parent_type"]     # We are resetting the type to the parent type
         yt_id = get_id(yt)
         keys["files"] = set()
+
         for file_type in to_download:
             if to_download[file_type]:
                 filepath = helper.calculate_filepath(file_type, yt_string, keys["parent_name"], keys["name"])
@@ -241,4 +247,4 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, f
                 keys["files"].add(filepath)
         return keys
     else: 
-        logging(f"Failed to get keys for {yt}")
+        logging.error(f"Failed to get keys for {yt}")
