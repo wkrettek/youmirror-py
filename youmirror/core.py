@@ -64,16 +64,19 @@ class YouMirror:
         # Config setup
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
         db_path = path/Path(self.db)                # Get the db file & ensure it exists
-        if not config_path.is_file():                           # Verify the config file exists   
+        if not config_path.is_file():               # Verify the config file exists   
             logging.error(f'Could not find config file in directory \'{path}\'')
             return
-        if not db_path.is_file():                               # Verify the database file exists
+        if not db_path.is_file():                   # Verify the database file exists
             logging.error(f'Could not find database file in directory \'{path}\'')
+            return
+
         # Load the config
         try:
             self.config = configurer.load_config(config_path)
         except Exception as e:
             logging.exception(f"Could not load given config file due to {e}")
+            return
 
         # Load the options from config
         active_options = configurer.defaults                                # Load default options
@@ -163,6 +166,13 @@ class YouMirror:
                     for file in files:
                         filetree_table[file] = {"type": "file"}
                         logging.info(f"Adding {file} to the database")  
+
+        # Commit to database
+        '''
+        for file in files:
+            filetree_table[file] = {"type": "file"}
+        logging.info(f"Adding {file} to the database")  
+        '''
 
         # Update config file
         configurer.save_config(config_path, self.config)                                  

@@ -4,12 +4,12 @@ This module handles all of the downloading to disk, and parses whatever
 filters were passed down from the config 
 '''
 from pytube import YouTube, StreamQuery, Stream, Caption
-from pytube import cipher
 import logging
 from pathlib import Path
 from urllib.request import urlretrieve  # Using this to download thumbnails
 
 file_types = {"video", "caption", "audio", "thumbnail"}
+resolutions = {"highest", "lowest", "144p", "240p", "360p", "480p", "720p", "1080p", "1440p", "2160p", "4320p"}
 
 def get_stream(yt: YouTube, file_type: str, options: dict) -> Stream:
     '''

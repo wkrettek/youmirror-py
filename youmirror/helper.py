@@ -9,51 +9,19 @@ generate the paths and filenames that make up the project with the given options
 and resolve any naming conflicts. Thankfully, we can do most of our work with just
 pathlib and some crafty organization
 # TODO
-I am deciding between two filetree implementations
-Let's call this the 'tall' implementation
+This is what the filetree looks like:
    Root
     | -- channels
             | -- channel name
                     | -- single name
-                            | -- video file
-                            | -- caption file
-                            | -- audio file
-                            | -- thumbnail file
+                            | -- files
     | -- playlists
             | -- playlist name
                     | -- single name
-                            | -- video file
-                            | -- caption file
-                            | -- audio file
-                            | -- thumbnail file
+                            | -- files
     | -- singles
             | -- single name
-                    | -- video file
-                        
-
------ or -----
-Lets' call this the 'wide' implementation
-   Root
-    | -- videos
-            | -- channels
-                    | -- channel name
-            | -- playlists
-                    | -- playlist name
-            | -- singles
-    | -- captions
-            | -- channels
-            | -- playlists
-            | -- singles
-    | -- audio
-            | -- channels
-            | -- playlists
-            | -- singles
-    | -- thumbnails
-            | -- channels
-            | -- playlists
-            | -- singles
-------------------
-I think for now I will implement the 'tall' implementation because it keeps things altogether. I may add an option to switch between the two later
+                    | -- files
 ------------------
 I think I can implement an "export" command later on to use the db to export things that are grouped together. Sucks if your db gets corrupted, but oh well
 '''
@@ -92,23 +60,15 @@ def create_path(path: Path) -> None:
     except Exception as e:
         print(e)
 
-def calculate_path(file_type: str, yt_type: str, parent_name) -> str:
+def calculate_path(yt_type: str, parent_name: str, single_name) -> str:
     '''
     Calculates 
-    wide formula = /file_type/yt_type/parent_name
-    tall formula = /yt_type/parent_name/file_type
+    formula = /yt_type/parent_name/single_name
     '''
-    # File type comes from options
-    # Parent type comes from yt type
-    # Parent name comes from yt name
-    filetree_type = "tall"  # TODO THIS SHOULD BE PASSED FROM CONFIGS WHEN IMPLEMENTED
     yt_types = {"channel": "channels","playlist": "playlists", "single": "singles"}         # Valid parent types
     if yt_type in yt_types:             # Check the yt_type is valid
         yt_type = yt_types[yt_type]     # Yes I know this is dumb but I need to make it plural for formatting reasons
-    if filetree_type == "tall":
-        path = Path(yt_type)/Path(parent_name)/Path(file_type)  # Build the filepath
-    else:
-        path = Path(file_type)/Path(yt_type)/Path(parent_name)
+        path = Path(yt_type)/Path(parent_name)/Path(single_name)  # Build the filepath
     return  str(path)
 
 def calculate_filename(file_type: str, yt_name: str) -> str:
@@ -118,9 +78,12 @@ def calculate_filename(file_type: str, yt_name: str) -> str:
     # File type comes from options
     # Parent type comes from yt type
     # Parent name comes from yt name
-    file_type_to_extension = {"videos": ".mp4", "captions": ".srt", "audio": ".mp3", "thumbnails": ".jpg"}
-    if file_type in valid_file_types:
+        
+    file_type_to_extension = {"videos": ".mp4", "captions": ".srt", "audio": ".mp4", "thumbnails": ".jpg"}
+    if file_type in valid_file_types:                   # Verify the file type is valid
         extension = file_type_to_extension[file_type]   # Convert the file type to an extension
+        if file_type == "audio":                        # If the file type is audio
+            filename = f'{filename}_audio'              # Append "_audio" to the end of the filename
         filename = f"{yt_name}{extension}"              # Add the name and extension together
         return filename
     else:
@@ -130,9 +93,9 @@ def calculate_filepath(file_type: str, yt_type: str, parent_name: str,  yt_name:
     '''
     Calculates what filepaths apply to a given 
     '''
-    path = calculate_path(file_type, yt_type, parent_name)
-    filename = calculate_filename(file_type, yt_name)
-    filepath = Path(path)/Path(filename)
+    path = calculate_path(file_type, yt_type, parent_name)  # Get the path
+    filename = calculate_filename(file_type, yt_name)       # Get the filename
+    filepath = Path(path)/Path(filename)                    # Add them together
     return str(filepath)
 
 # TODO
