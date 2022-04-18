@@ -1,3 +1,10 @@
+README
+    setup
+    api
+        add
+        remove
+        sync
+
 cli
     add
         be able to add multiple urls
@@ -14,17 +21,24 @@ Parser
         Somehow rip just enough not to cause any errors.. I guess just skip metadata we can't get that's not crucial
     for get_keys():
         resolve collision is maybe a database thing?
+
 Helper
-    Can I rename this thing??
-    --- I changed the filetree type back to tall by default
+    --- I changed the filetree to what df said which makes sense
+    How to differentiate audio files from video files when they are both mp4?
+    Remove spaces from filenames?
+    Calculate the size of the file additions and send to printer before downloading
+
 Databaser
     Wrap up the databasing as much as possible to abstract it from database implementation
         using sqlitedict for now
+
 Downloader
-    Calculate all the filepaths before hand, only download at the very end
-    Should be very specific
-        You only pass video objects when you're ready to download
-        Somehow have to be able to pass all the different specifiers
+    --- For now I will just provide defaults and deal with the other more crucial parts of the tool, like showing is actually really important
+    Download should be best effort to match (video) resolution
+    Audio should be just default quality, idk if I will really provide any specifiers
+    Download specified resolution and combine audio with ffmpeg?
+    There's actually a lot of nuance that can go into this, but the top level api has to be better at passing down the required info to handle different downloading situations
+
 
 
 

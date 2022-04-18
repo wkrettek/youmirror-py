@@ -8,8 +8,8 @@ to create one again. Right now I'm using pytube objects to get my id,
 but I'll need to implement my own regex to get the id from a url instead of
 using pytube's
 '''
-from pytube import YouTube, Channel, Playlist
-from typing import Union, Callable, Any
+from pytube import YouTube, Channel, Playlist, extract
+from typing import Union, Any, Callable
 import youmirror.helper as helper
 import logging
 
@@ -29,6 +29,17 @@ def link_type(url: str) -> str:
     else:
         logging.error(f"\'{url}\' is not a valid url")
         return None
+
+def link_id(url: str, yt_string = None) -> str:
+    '''
+    Uses pytube's extract module to get the id from a url (more lightweight than creating an object)
+    '''
+    yt_string_to_func = {"channel": extract.channel_name, "playlist": extract.playlist_id, "single": extract.video_id}  # Translation dict from yt type to function
+
+    if not yt_string:                   # Calculate the yt_string if not passed
+        yt_string = link_type(url)
+    func = yt_string_to_func[yt_string] # Extract the proper id from the url
+    return func(url)
     
 def yt_to_type_string(yt: Union[Channel, Playlist, YouTube]) -> str:
     '''
@@ -46,23 +57,15 @@ def get_metadata(yt: Union[Channel, Playlist, YouTube]) -> dict:
     Returns the metadata of a given pytube object as a dict
     '''
     meta = dict()
-    if isinstance(yt, Channel):
-        meta["name"] = yt.channel_name
-        children = get_children(yt)
-        children_ids = set([get_id(get_pytube(child)) for child in children])    # We want the ids (not urls) for databasing purposes
-        meta["children"] = children_ids
-        meta["available"] = True            # We will add a check later to determine this
-
-    elif isinstance(yt, Playlist):
-        meta["name"] = yt.title
-        children = get_children(yt)
-        children_ids = set([get_id(get_pytube(child)) for child in children])    # We want the ids (not urls) for databasing purposes
-        meta["children"] = children_ids
+    meta["name"] = get_name(yt)             # Get the name
+    if type(yt) in [Channel, Playlist]:     # Check if we have a channel or playlist
+        children = get_children(yt)         # This will use pytube to get video_urls
+        children_ids = set([link_id(child, "single") for child in children])    # We want the ids (not urls) for databasing purposes
+        meta["children"] = children_ids     # Add the children ids to the metadata
         meta["available"] = True            # We will add a check later to determine this
 
     elif isinstance(yt, YouTube):
-        meta["name"] = yt.title
-        meta["available"] = is_available(yt)
+        meta["available"] = is_available(yt)    # Individual videos can be checked if they are available
     return meta
 
 def is_available(yt: YouTube) -> bool:
@@ -105,12 +108,10 @@ def get_id(yt: Union[YouTube, Channel, Playlist]) -> str:
     # pytype = type(yt)
     # func = funcs[pytype]
     # return func(yt)
-    if isinstance(yt, YouTube):
-        return yt.video_id
-    elif isinstance(yt, Channel):
-        return yt.channel_uri
-    elif isinstance(yt, Playlist):
-        return yt.playlist_id
+    type_to_id = {YouTube: "video_id", Channel: "channel_uri", Playlist: "playlist_id"}    # Translation dict from type to attribute
+    t = type(yt)
+    if t in type_to_id:
+        return getattr(yt, type_to_id[t])
     else:
         logging.error(f"Failed to get id for {yt}")
         return None
@@ -119,12 +120,10 @@ def get_name(yt: Union[YouTube, Channel, Playlist]) -> str:
     """
     Returns the name of the pytube object
     """
-    if isinstance(yt, YouTube):
-        return yt.title
-    elif isinstance(yt, Channel):
-        return yt.channel_name
-    elif isinstance(yt, Playlist):
-        return yt.title
+    type_to_name = {YouTube: "title", Channel: "channel_name", Playlist: "title"}    # Translation dict from type to attribute
+    t = type(yt)                         # Get the type of the object
+    if t in type_to_name:                # If it is a valid type
+        return getattr(yt, type_to_name[t])   # Return the attribute
     else:
         logging.error(f"Failed to get name for {yt}")
         return None
@@ -133,12 +132,10 @@ def get_url(yt: Union[YouTube, Channel, Playlist]) -> str:
     """
     Returns the url of the pytube object
     """
-    if isinstance(yt, YouTube):
-        return yt.watch_url
-    elif isinstance(yt, Channel):
-        return yt.vanity_url
-    elif isinstance(yt, Playlist):
-        return yt.playlist_url
+    type_to_url = {YouTube: "watch_url", Channel: "vanity_url", Playlist: "playlist_url"}    # Translation dict from type to property
+    t = type(yt)                         # Get the type of the object
+    if t in type_to_url:                # If it is a valid type
+        return getattr(yt, type_to_url[t])   # Return the attribute
     else:
         logging.error(f"Failed to get url for {yt}")
         return None
@@ -147,16 +144,13 @@ def get_children(yt: Union[Channel, Playlist]) -> list[str]:
     '''
     Takes either a Channel or Playlist object and returns its video links as a list of strings
     '''
-    if isinstance(yt, Channel):
-        logging.debug(f"Getting children for {yt.vanity_url}")
-        children = [url for url in yt.video_urls]  # Will need to simplify this later on 
+    try:
+        logging.debug(f"Getting children for {get_name(yt)}")
+        children = [url for url in yt.video_urls]   # Maybe we can async get this in the future?
         return children
-    elif isinstance(yt, Playlist):
-        logging.debug(f"Getting children for {yt.title}")
-        children = [url for url in yt.video_urls]  # Will definitely wrap this in a function later on
-        return children
-    else: 
-        return ""
+    except Exception as e:
+        logging.exception(f"Failed to get children for {get_name(yt)} due to {e}")
+        return None
 
 def is_available(yt: YouTube) -> bool:
     '''
@@ -187,62 +181,47 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, f
             Singles
                 id
                 name
-                type    Parent type
-                parent
+                type        AKA parent type
+                parent      Parent's id
                 available
                 files
     You can pass in a dict if you want to inject some values from above
     This is going to be a heavy function that calls from a lot of places. It's calculating a lot of things
     '''
     to_download = { # Returns true/false if we want to download the video
-        "videos": options["dl_video"], 
+        "video": options["dl_video"], 
         "audio": options["dl_audio"], 
-        "captions": options["dl_captions"], 
-        "thumbnails": options["dl_thumbnail"]
+        "caption": options["dl_captions"], 
+        "thumbnail": options["dl_thumbnail"]
     }
 
     yt_string = yt_to_type_string(yt)   # Get the type as a string
+    metadata = get_metadata(yt)         # Strip the useful data off the pytube object
+    keys.update(metadata)               # Add to our keys
+    yt_id = get_id(yt)                  # We use this to resolve collisions
 
-    if yt_string == "channel":
-        metadata = get_metadata(yt)
-        keys.update(metadata)
-        yt_id = get_id(yt)
+    if yt_string in ["channel", "playlist"]:    # Do the same stuff for channels and playlists
         keys["paths"] = set()
         for file_type in to_download:
             if to_download[file_type]:
-                path = helper.calculate_path(file_type, yt_string, keys["name"])
-                path = helper.resolve_collision(path, filetree, yt_id)
-                keys["paths"].add(path)
-        return keys
-
-    elif yt_string == "playlist":
-        metadata = get_metadata(yt)
-        keys.update(metadata)
-        yt_id = get_id(yt)
-        keys["paths"] = set()
-        for file_type in to_download:
-            if to_download[file_type]:
-                path = helper.calculate_path(file_type, yt_string, keys["name"])
+                path = helper.calculate_path(yt_string, keys["name"], "")
                 path = helper.resolve_collision(path, filetree, yt_id)
                 keys["paths"].add(path)
         return keys
 
     elif yt_string == "single":
-
-        metadata = get_metadata(yt)
-        keys.update(metadata)
-        if "parent_name" not in keys:
-            keys["parent_name"] = ""
-        if "parent_type" not in keys:
-            keys["parent_type"] = "single"
+        if "parent_name" not in keys:           # Check if the parent name is already in the keys
+            keys["parent_name"] = ""            # Parent's name is empty if it's a single
+        if "parent_type" not in keys:           # Check if the parent type is already in the keys
+            keys["parent_type"] = "single"      # Parent's type is single if it's a single
         else:
             yt_string = keys["parent_type"]     # We are resetting the type to the parent type
-        yt_id = get_id(yt)
-        keys["files"] = set()
+        keys["files"] = set()                   # Gonna add the files to this later
 
-        for file_type in to_download:
-            if to_download[file_type]:
+        for file_type in to_download:           # We want to check which file types to download
+            if to_download[file_type]:          # If that type is set to true
                 filepath = helper.calculate_filepath(file_type, yt_string, keys["parent_name"], keys["name"])
+                # TODO pass down parent's path to calculate_filepath
                 filepath = helper.resolve_collision(filepath, filetree, yt_id)
                 keys["files"].add(filepath)
         return keys

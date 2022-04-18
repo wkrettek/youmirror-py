@@ -2,14 +2,24 @@
 '''
 This module handles all of the downloading to disk, and parses whatever 
 filters were passed down from the config 
+
+My first priority is finding the best matching resolution when the user specifies it. Then, the container (mp4/webm) has to match the audio codec so we can combine them. The absolute basic default is to download the highest resolution video and audio. If we download by resolution we can use stream.includes_audio_track to decide if we have to find a matching audio track.
+
+I could maybe make other types of downloads available. I think a possible one is like a metadata and another one is like the js. Could be useful
+
 '''
-from pytube import YouTube, StreamQuery, Stream, Caption
+from pytube import YouTube, StreamQuery, Stream, Caption, request
 import logging
 from pathlib import Path
 from urllib.request import urlretrieve  # Using this to download thumbnails
 
-file_types = {"video", "caption", "audio", "thumbnail"}
-resolutions = {"highest", "lowest", "144p", "240p", "360p", "480p", "720p", "1080p", "1440p", "2160p", "4320p"}
+file_types = {"video", "caption", "audio", "thumbnail"} # TODO download js and raw html?
+resolutions = ["highest", "lowest", "144p", "240p", "360p", "480p", "720p", "1080p", "1440p", "2160p", "4320p"] # Stored as a list because order is important
+sub_types = ["mp4", "webm"]    # Prefer mp4 over webm
+resolution_to_itags = {
+    "144p": {}, "240p": {}, "360p": {}, "480p": {}, "720p": {},
+    "1080":{}, "1440":{}, "2160":{}, "4320":{},
+}
 
 def get_stream(yt: YouTube, file_type: str, options: dict) -> Stream:
     '''
@@ -17,8 +27,9 @@ def get_stream(yt: YouTube, file_type: str, options: dict) -> Stream:
     # TODO this implements a fix that is not in pytube right now so it is in my wkrettek repo,
     Need to implement myself until pytube is updated
     '''
+    subtype = "mp4" # This is the subtype we're gonna go with
     if file_type == "audio":
-        stream = yt.streams.get_audio_only()
+        stream = yt.streams.filter(only_audio=True, subtype=subtype).order_by("abr").desc()
     else:
         stream = yt.streams.get_highest_resolution()
     return stream
@@ -56,6 +67,9 @@ def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> st
 def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
     '''
     Gets the audio from a video and downloads it
+    -----
+    Stream looks like yt.streams.filter(only_audio=True, subtype="mp4").desc()
+    Audio files are coming out too long, so we want to trim it to the reported length if it is longer
     '''
     options["dl_audio"] = True
     try:

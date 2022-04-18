@@ -7,6 +7,7 @@ import logging              # Logging
 from typing import Union    # For typing
 from pytube import YouTube, Channel, Playlist
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
+from datetime import datetime
 import shutil               # For removing whole directories     
 
 '''
@@ -87,9 +88,18 @@ class YouMirror:
 
         # Parse the url & create pytube object
         try:
-            if not(url_type := parser.link_type(url)):       # Get the url type (channel, playlist, single)
+            if not(yt_string := parser.link_type(url)):             # Get the url type (channel, playlist, single)
+                print(f"Invalid url \'{url}\'")
                 return
-            yt = parser.get_pytube(url)             # Get the proper pytube object
+            if not(id := parser.link_id(url)):                      # Get the id from the url
+                print(f'Could not parse id from url \'{url}\'')
+                return
+            if configurer.yt_exists(yt_string, id, self.config):    # Check if the link is already in the mirror
+                print(f'url \'{url}\' already exists in the mirror')
+                return
+            if not (yt := parser.get_pytube(url)):                             # Get the proper pytube object
+                print(f'Could not parse url \'{url}\'')
+                return
         except Exception as e:
             logging.exception(f"Could not parse url {url} due to {e}")
 
@@ -98,21 +108,19 @@ class YouMirror:
             id = parser.get_id(yt)                  # Get the id of the pytube object
             name = parser.get_name(yt)              # Get the name of the pytube object
             url = parser.get_url(yt)                # Get the url of the pytube object
+            last_updated = datetime.now().strftime('%Y-%m-%d')     # Get the date of the pytube object
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
-        specs = {"name": name, "url": url, "type": url_type}
+        specs = {"name": name, "url": url, "last_updated": last_updated}
         
         # Add the id to the config
         to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add
         yt_string = parser.yt_to_type_string(yt)                # Get the yt type string
-        if configurer.yt_exists(yt_string, id, self.config):
-            logging.info(f"{url} already exists in the mirror")
-            return                                              # End command here if the url is already in the mirror
-        else:
-            logging.info(f"Adding {url} to the mirror")
-            self.config[yt_string][id] = specs                  # TODO doing it directly for now, but we should go through the configurer
-            # configurer.add_yt(yt_string, id, self.config, specs)       # Add the url to the config # TODO TODO TODO
-            to_add.append(yt)                                            # Mark it for adding
+
+        logging.info(f"Adding {url} to the mirror")
+        self.config[yt_string][id] = specs                  # TODO doing it directly for now, but we should go through the configurer
+        # configurer.add_yt(yt_string, id, self.config, specs)       # Add the url to the config # TODO TODO TODO
+        to_add.append(yt)                                            # Mark it for adding
 
         # Open the database tables
         channels_table = databaser.get_table(db_path, "channels")
@@ -139,7 +147,7 @@ class YouMirror:
                     logging.info(f"Adding {file} to the database")
 
             if "children" in keys:                              # If any children appeared when we got keys
-                item_path = next(iter(keys["paths"]))          # Get a calculated path from the keys
+                item_path = next(iter(keys["paths"]))           # Get a calculated path from the keys
                 item_path = item_path.split("/")[1:]            # Split the first bit off
                 item_path = "/".join(item_path)                 # Join the list back together
                 filetree_table[item_path] = {"type": "path"}    # Record the path in the filetree table
@@ -178,14 +186,14 @@ class YouMirror:
         configurer.save_config(config_path, self.config)                                  
 
         # If not forced, report how much downloading there is to do and ask for confirmation
-        if not kwargs.get("dry_run", False):    # Check for a dry run
-            for item in to_download:            # Search through all the pytube objects we want to download
-                id = parser.get_id(item)        # Get the id
-                files = singles_table[id]["files"]  # Get the files from the database
-                for file in files:                  # Search through all the files
-                    if not Path(file).exists():     # If the file doesn't exist
-                        file = str(path/Path(file)) # Inject the root that was passed from the add() function call
-                        downloader.download_single(item, file, active_options) # Download it
+        # if not kwargs.get("dry_run", False):    # Check for a dry run
+        #     for item in to_download:            # Search through all the pytube objects we want to download
+        #         id = parser.get_id(item)        # Get the id
+        #         files = singles_table[id]["files"]  # Get the files from the database
+        #         for file in files:                  # Search through all the files
+        #             if not Path(file).exists():     # If the file doesn't exist
+        #                 file = str(path/Path(file)) # Inject the root that was passed from the add() function call
+        #                 downloader.download_single(item, file, active_options) # Download it
 
     def remove(
         self,

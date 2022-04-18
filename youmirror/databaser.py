@@ -35,19 +35,20 @@ I need to abstract the database management as much as possible so it's easy to s
 The earlier we can find the best database the better, 
 because changing databases later on will fuck everybody's archives all up
 '''
+from enum import auto
 from sqlitedict import SqliteDict
 import logging
 from pathlib import Path
 
 db_file = "youmirror.db"
+valid_tables = {"channels", "playlists", "singles", "filetree"}
 
-def get_table(path: Path, table: str) -> SqliteDict:
+def get_table(path: Path, table: str, autocommit=True) -> SqliteDict:
     '''
     Returns a table from the database that matches the string
     '''
-    valid_tables = {"channels", "playlists", "singles", "filetree"}
     if table in valid_tables:
-        return SqliteDict(path, tablename=table, autocommit=True)   # TODO in the future I would like to wait to commit all at once, but I get concurrency errors without it
+        return SqliteDict(path, tablename=table, autocommit=autocommit)   # TODO in the future I would like to wait to commit all at once, but I get concurrency errors without it
     else:
         logging.error(f"Invalid table {table} given")
         return None

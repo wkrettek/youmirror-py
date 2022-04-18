@@ -11,10 +11,14 @@ typer = "^0.4.1"
 sqlitedict = "^2.0.0"
 toml = "^0.10.2"
 pytube = {git = "https://github.com/wkrettek/pytube"}
+ffmpeg-python = "^0.2.0"
 
 [tool.poetry.scripts]
 youmirror = 'youmirror.cli:main'
 
+
+[tool.poetry.dev-dependencies]
+ipykernel = "^6.13.0"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
