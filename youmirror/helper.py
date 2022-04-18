@@ -1,4 +1,4 @@
-__all__ = [""]
+
 
 '''
 This module manages the filetree, I don't really know why it's called helper
@@ -26,9 +26,10 @@ This is what the filetree looks like:
 I think I can implement an "export" command later on to use the db to export things that are grouped together. Sucks if your db gets corrupted, but oh well
 '''
 from pathlib import Path
+from pytube.helpers import safe_filename
 import logging
 
-valid_file_types = {"videos", "captions", "audio", "thumbnails"}  # Valid file types
+valid_file_types = {"video", "caption", "audio", "thumbnail"}  # Valid file types
 
 def file_exists(filepath: Path) -> bool:
     '''
@@ -66,6 +67,8 @@ def calculate_path(yt_string: str, parent_name: str, single_name) -> str:
     formula = /yt_strings/parent_name/single_name
     '''
     valid_yt_strings = {"channel" , "playlist", "single"}           # Valid yt strings
+    parent_name = safe_filename(parent_name).replace(' ', '_')                        # Sanitize the parent name (using pytube)
+    single_name = safe_filename(single_name).replace(' ', '_')                        # Sanitize the single name (using pytube)
     if yt_string in valid_yt_strings:                               # Check the yt_string is valid
         yt_string = yt_string + 's'                                 # Make plural for formatting reasons 
         path = Path(yt_string)/Path(parent_name)/Path(single_name)  # Build the filepath
@@ -79,12 +82,12 @@ def calculate_filename(file_type: str, yt_name: str) -> str:
     '''
         
     file_type_to_extension = {"video": "mp4", "caption": "srt", "audio": "mp4", "thumbnail": "jpg"}
-    if file_type in valid_file_types:                   # Verify the file type is valid
-        filename = yt_name.replace(" ", "_")            # Replace spaces with underscores
-        extension = file_type_to_extension[file_type]   # Convert the file type to an extension
-        if file_type == "audio":                        # If the file type is audio
-            filename = f'{filename}_audio'              # Append "_audio" to the end of the filename
-        filename = f"{yt_name}.{extension}"             # Add the name and extension together
+    if file_type in valid_file_types:                       # Verify the file type is valid
+        filename = safe_filename(yt_name).replace(' ','_')  # Sanitize the filename
+        extension = file_type_to_extension[file_type]       # Convert the file type to an extension
+        if file_type == "audio":                            # If the file type is audio
+            filename = f'{filename}_audio'                      # Append "_audio" to the end of the filename
+        filename = f"{filename}.{extension}"                # Add the name and extension together
         return filename
     else:
         logging.error(f"Invalid file type {file_type} passed") 
@@ -105,9 +108,9 @@ def resolve_collision(path: str, filetree: dict, yt_id: str) -> str:
     '''
     if path in filetree:                        # If the path already exists
         logging.debug(f"Path {path} already exists")
-        stem = Path(path).stem                  # Get the stem of the path
-        suffix = Path(path).suffix              # Get the suffix of the path
-        path = stem + f'_{yt_id}' + suffix    # Append "_ym{yt_id}" to the end of the name, reattach suffix 
+        suffix = str(Path(path).suffix)         # Get the suffix of the path
+        path = str(Path(path).with_suffix(''))  # Remove the suffix
+        path = f'{path}_{yt_id}{suffix}'        # Append "_ym{yt_id}" to the end of the name, reattach suffix 
     return path
 
 def verify_installation(filepath: Path) -> bool:
