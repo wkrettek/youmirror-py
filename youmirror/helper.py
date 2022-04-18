@@ -22,6 +22,8 @@ This is what the filetree looks like:
     | -- singles
             | -- single name
                     | -- files
+
+I'm gonna have to change single to video everywhere aren't I -_-
 ------------------
 I think I can implement an "export" command later on to use the db to export things that are grouped together. Sucks if your db gets corrupted, but oh well
 '''

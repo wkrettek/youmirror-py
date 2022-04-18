@@ -1,20 +1,19 @@
-README
-    setup
-    api
-        add
-        remove
-        sync
 
-cli
-    add
-        be able to add multiple urls
-        can specify dry run
-    show
-        show current state of database
-            [1] list all channels, playlists, 
     
 printer
     [1] show name, type, url, num children, size
+    Do some basic formatting
+
+cli
+    remove
+        finish it up
+    sync
+        Start this after remove
+    Be able to specify more options
+        Like resolution
+    add
+        be able to add multiple urls
+        can specify dry run
 
 Parser
     Be able to rip all the metadata
@@ -29,8 +28,13 @@ Helper
     Calculate the size of the file additions and send to printer before downloading
 
 Databaser
+    Do all commits at once no matter what
+        Have to make this happen for filetree integrity
+            Or I guess I could just do a check every time if it's been added?
+                Or I could revert like poetry does?
     Wrap up the databasing as much as possible to abstract it from database implementation
         using sqlitedict for now
+
 
 Downloader
     --- For now I will just provide defaults and deal with the other more crucial parts of the tool, like showing is actually really important
