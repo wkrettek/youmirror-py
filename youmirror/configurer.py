@@ -20,8 +20,8 @@ defaults = {                # These are the default global configs if not specif
     "dry_run": False,       # Dry run means don't download automatically
     "dl_video": True,       # Whether to download video
     "dl_captions": True,   # Whether to download captions
-    "dl_audio": True,      # Whether to download audio
-    "dl_thumbnail": True,  # Whether to download the thumbnail
+    "dl_audio": False,      # Whether to download audio
+    "dl_thumbnail": False,  # Whether to download the thumbnail
     "captions": ["en", "a.en"]  # Which caption types to check for
 }
 

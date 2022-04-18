@@ -186,14 +186,14 @@ class YouMirror:
         configurer.save_config(config_path, self.config)                                  
 
         # If not forced, report how much downloading there is to do and ask for confirmation
-        # if not kwargs.get("dry_run", False):    # Check for a dry run
-        #     for item in to_download:            # Search through all the pytube objects we want to download
-        #         id = parser.get_id(item)        # Get the id
-        #         files = singles_table[id]["files"]  # Get the files from the database
-        #         for file in files:                  # Search through all the files
-        #             if not Path(file).exists():     # If the file doesn't exist
-        #                 file = str(path/Path(file)) # Inject the root that was passed from the add() function call
-        #                 downloader.download_single(item, file, active_options) # Download it
+        if not kwargs.get("dry_run", False):    # Check for a dry run
+            for item in to_download:            # Search through all the pytube objects we want to download
+                id = parser.get_id(item)        # Get the id
+                files = singles_table[id]["files"]  # Get the files from the database
+                for file in files:                  # Search through all the files
+                    if not Path(file).exists():     # If the file doesn't exist
+                        file = str(path/Path(file)) # Inject the root that was passed from the add() function call
+                        downloader.download_single(item, file, active_options) # Download it
 
     def remove(
         self,
