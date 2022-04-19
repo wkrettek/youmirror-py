@@ -135,9 +135,10 @@ class YouMirror:
         channels_table = databaser.get_table(db_path, "channels")
         playlists_table = databaser.get_table(db_path, "playlists")
         singles_table = databaser.get_table(db_path, "singles")
-        filetree_table = databaser.get_table(db_path, "filetree")
+        paths_table = databaser.get_table(db_path, "paths")
+        files_table = databaser.get_table(db_path, "files")
 
-        string_to_table = {"channel": channels_table, "playlist": playlists_table, "single": singles_table, "filetree": filetree_table}  # Translation dict for pytube type to db table
+        string_to_table = {"channel": channels_table, "playlist": playlists_table, "single": singles_table, "path": paths_table, "file": files_table}  # Translation dict for pytube type to db table
 
         # Add the items to the database
         to_download: list[YouTube] = []     # List of items to download
@@ -215,13 +216,13 @@ class YouMirror:
         configurer.save_config(config_path, self.config)
 
         # Download all the files                                 
-        for item in to_download:            # Search through all the pytube objects we want to download
-            id = parser.get_id(item)        # Get the id
-            files = singles_table[id]["files"]  # Get the files from the database
-            for file in files:                  # Search through all the files
-                if not Path(file).exists():     # If the file doesn't exist
-                    file = str(path/Path(file)) # Inject the root that was passed from the add() function call
-                    downloader.download_single(item, file, active_options) # Download it
+        # for item in to_download:            # Search through all the pytube objects we want to download
+        #     id = parser.get_id(item)        # Get the id
+        #     files = singles_table[id]["files"]  # Get the files from the database
+        #     for file in files:                  # Search through all the files
+        #         if not Path(file).exists():     # If the file doesn't exist
+        #             file = str(path/Path(file)) # Inject the root that was passed from the add() function call
+        #             downloader.download_single(item, file, active_options) # Download it
 
     def remove(
         self,

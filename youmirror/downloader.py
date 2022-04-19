@@ -8,8 +8,6 @@ My first priority is finding the best matching resolution when the user specifie
 I could maybe make other types of downloads available. I think a possible one is like a metadata and another one is like the js. Could be useful
 
 '''
-from email.mime import audio
-from operator import indexOf
 from pytube import YouTube, StreamQuery, Stream, Caption, request
 import logging
 from pathlib import Path
@@ -20,10 +18,6 @@ file_types = {"video", "caption", "audio", "thumbnail"} # TODO download js and r
 # Order resolutions from highest to lowest in a list
 resolutions = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"] # Stored as a list because order is important
 sub_types = ["mp4", "webm"]    # Prefer mp4 over webm
-resolution_to_itags = {
-    "144p": {}, "240p": {}, "360p": {}, "480p": {}, "720p": {},
-    "1080":{}, "1440":{}, "2160":{}, "4320":{},
-}
 
 def get_stream(yt: YouTube, file_type: str, options: dict) -> Stream:
     '''
@@ -63,11 +57,11 @@ def combine_video_audio(video_file: str, audio_file: str) -> str:
     '''
     Combines the video and audio files
     '''
-    temp = Path(f'{video_file}.temp')
-    temp.touch()
-    Path(audio_file).rename(temp)
-    temp = str(temp)
-    subprocess.run(["ffmpeg", "-y", "-i", f"{temp}", "-i", f"{audio_file}", "-c:v", "copy", "-c:a", "copy", f"{video_file}"])    # Use ffmpeg to combine the video and audio
+    temp = Path(f'{video_file}.temp')   # Create temp file
+    temp.touch()                        # Create the file   
+    Path(video_file).rename(temp)       # Rename the video file to the temp file
+    temp = str(temp)                    # Convert to string
+    subprocess.run(["ffmpeg", "-y", "-i", f"{temp}", "-i", f"{audio_file}", "-c:v", "copy", "-c:a", "copy", f"{video_file}"])               # Use ffmpeg to combine the video and audio
     Path(audio_file).unlink()     # Delete the temp audio file
     Path(temp).unlink()           # Delete the temp video file
     return video_file
@@ -150,13 +144,10 @@ def download_thumbnail(yt: YouTube, path: str, filename: str, options: dict) -> 
         logging.exception(f'Could not download thumbnail at {filename}')
     # TODO implement a way to download the url, probably copy however pytube manages to do it without dependencies
 
-def download_single(yt: YouTube, filepath: str, options: dict) -> None:
+def download_single(yt: YouTube, file_type: str, filepath: str, options: dict) -> None:
     '''
     Takes a single YouTube object and handles the downloading based on configs
     '''
-    extension_to_file_type = {  # Translation from file extension to file type
-        ".mp4":"video", ".mp3": "audio", 
-        ".srt": "caption", ".jpg": "thumbnail"}
 
     file_type_to_do = {         # Translation from file type to func
         "video": download_video, 
@@ -170,7 +161,5 @@ def download_single(yt: YouTube, filepath: str, options: dict) -> None:
 
     print(f"Downloading {filepath}")
 
-    extension = Path(filepath).suffix   # Get the extension
-    file_type = extension_to_file_type[extension]   # Convert to file type
-    func = file_type_to_do[file_type]   # Figure out what to do
-    func(yt, path, filename, options)         # Call the function
+    func = file_type_to_do[file_type]               # Figure out what to do
+    func(yt, path, filename, options)               # Call the function

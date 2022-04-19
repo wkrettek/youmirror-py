@@ -41,7 +41,7 @@ import logging
 from pathlib import Path
 
 db_file = "youmirror.db"
-valid_tables = {"channels", "playlists", "singles", "filetree"}
+valid_tables = {"channels", "playlists", "singles", "paths", "files"}
 
 def get_table(path: Path, table: str, autocommit=True) -> SqliteDict:
     '''
