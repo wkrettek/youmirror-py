@@ -90,7 +90,7 @@ class YouMirror:
             logging.error(f"Invalid resolution \'{active_options['resolution']}\', valid resolutions = {downloader.resolutions}")
             return
         logging.debug("Active options:", active_options)
-        active_options["had_ffmpeg"] = shutil.which("ffmpeg") is not None
+        active_options["had_ffmpeg"] = shutil.which("ffmpeg") is not None   # Record whether they have ffmpeg
         # self.config.update({"resolution": active_options["resolution"]})
 
         # Parse the url & create pytube object

@@ -8,10 +8,12 @@ My first priority is finding the best matching resolution when the user specifie
 I could maybe make other types of downloads available. I think a possible one is like a metadata and another one is like the js. Could be useful
 
 '''
+from email.mime import audio
 from operator import indexOf
 from pytube import YouTube, StreamQuery, Stream, Caption, request
 import logging
 from pathlib import Path
+import subprocess
 from urllib.request import urlretrieve  # Using this to download thumbnails
 
 file_types = {"video", "caption", "audio", "thumbnail"} # TODO download js and raw html?
@@ -57,6 +59,20 @@ def get_audio_stream(yt: YouTube, options: dict) -> Stream:
     '''
     return yt.streams.get_audio_only()  # This returns the highest bitrate audio stream by default (mp4)
 
+def combine_video_audio(video_file: str, audio_file: str) -> str:
+    '''
+    Combines the video and audio files
+    '''
+    temp = Path(f'{video_file}.temp')
+    temp.touch()
+    Path(audio_file).rename(temp)
+    temp = str(temp)
+    subprocess.run(["ffmpeg", "-y", "-i", f"{temp}", "-i", f"{audio_file}", "-c:v", "copy", "-c:a", "copy", f"{video_file}"])    # Use ffmpeg to combine the video and audio
+    Path(audio_file).unlink()     # Delete the temp audio file
+    Path(temp).unlink()           # Delete the temp video file
+    return video_file
+
+
 def get_filesize(yt: YouTube, options: dict) -> int:
     '''
     Gets the filesize of the video
@@ -72,7 +88,7 @@ def download_stream(stream: Stream, path: str, filename: str, options: dict) -> 
     '''
     Downloads to the given filepath and returns if a new file was downloaded or not
     '''
-    filename = filename + ".mp4"
+    # filename = filename + ".mp4"
     stream.download(output_path=path, filename=filename) # Download to the appropriate path and name
     return True
 
@@ -81,9 +97,13 @@ def download_video(yt: YouTube, path: str, filename: str, options: dict) -> None
     Gets the proper stream for video and downloads it
     '''
     try:
-        # stream = get_stream(yt, "video", options)     # Get stream with applied filters
-        stream = get_video_stream(yt, options)        # Get the video stream
-        download_stream(stream, path, filename, options)
+
+        video_stream = get_video_stream(yt, options)                # Get the video stream
+        download_stream(video_stream, path, filename, options)      # Download the video stream
+        if not video_stream.includes_audio_track:                   # If no audio track
+            audio_stream = get_audio_stream(yt, options)            # Get the audio streamm
+            download_stream(audio_stream, path, "temp_audio.mp4", options)  # Download the audio stream
+            combine_video_audio(f"{path}{filename}", f"{path}temp_audio.mp4") # Combine the video and audio
     except Exception as e:
         logging.exception(f'Could not download video at {str(path) + filename}')
 
