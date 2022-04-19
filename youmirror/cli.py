@@ -4,7 +4,7 @@ import typer
 from typing import Optional
 from youmirror.core import YouMirror
 
-app = typer.Typer()
+app = typer.Typer(help="Create a mirror of your favorite youtube videos", add_completion=False)
 
 def main():
 
@@ -13,8 +13,8 @@ def main():
 @app.command()
 def sync(
     url : str,
-    root : str = typer.Argument(None),
-    dry_run : Optional[bool] = typer.Option(False)
+    root : str = typer.Argument(None, help="The root directory to sync to, default=\'./\'"),
+    dry_run : Optional[bool] = typer.Option(default=False, show_choices=False, help="Calculates changes with no execution"),
     ):
     '''
     Syncs the filetree to the database
@@ -34,14 +34,16 @@ def new(root : str = typer.Argument(None)):
 @app.command()
 def add(
     url : str,
-    root : Optional[str] = typer.Argument(None, help='Root directory to add to'),
-    # dl_off : Optional[bool] = typer.Option(False, help='Change the config file and database but do not download anything'),
-    dry_run : Optional[bool] = typer.Option(default=False, help="Only calculate the changes")
+    root : Optional[str] = typer.Argument(default=None, help='Root directory for the mirror'),
+    resolution : Optional[str] = typer.Option("720p", "--resolution", help='Preferred resolution to download'),
+    force : Optional[bool] = typer.Option(False, "-f, --force", help='Force download without asking confirmation'),
+    dry_run : Optional[bool] = typer.Option(False, "--dry-run", help="Calculates changes with no execution"),
+    no_dl : Optional[bool] = typer.Option(False, "--no-dl", help='Like dry-run, but adds the url to the mirror without downloading')
     ):
     '''
-    Adds the url to the mirror
+    Adds the url to the mirror and downloads videos
     '''
-    kwargs = {"dry_run": dry_run}
+    kwargs = {"force": force, "resolution": resolution, "dry_run": dry_run, "no_dl": no_dl}
     yt = YouMirror()
     yt.add(url, root, **kwargs)
     return
@@ -52,25 +54,25 @@ def remove(
     root : Optional[str] = typer.Argument(None, help='Root directory to remove from'),
     ):
     '''
-    Removes the specified link from the mirror and deletes all files
+    Removes the url from the mirror and deletes all files
     '''
     ym = YouMirror()
     ym.remove(url, root)
 
-@app.command()
-def check():
-    '''
-    Checks the database to see if any mirrored files are no longer supported by Youtube.
-    Generally updates metadata
-    '''
-    return
+# @app.command()
+# def check():
+#     '''
+#     Checks the database to see if any mirrored files are no longer supported by Youtube.
+#     Generally updates metadata
+#     '''
+#     return
 
-@app.command()
-def update(root : str = typer.Argument(None)):
-    '''
-    Checks if new files were added to channels or playlists and downloads them
-    '''
-    return
+# @app.command()
+# def update(root : str = typer.Argument(None)):
+#     '''
+#     Checks if new files were added to channels or playlists and downloads them
+#     '''
+#     return
 
 @app.command()
 def show(root: str = typer.Argument(None)):
@@ -87,19 +89,19 @@ def config(root: str = typer.Argument(None)):
     '''
     pass  
 
-@app.command()
-def archive(root: str = typer.Argument(None)):
-    '''
-    Uploads the mirror to the internet archive
-    '''
-    pass
+# @app.command()
+# def archive(root: str = typer.Argument(None)):
+#     '''
+#     Uploads the mirror to the internet archive
+#     '''
+#     pass
 
-@app.command()
-def play(root: str = typer.Argument(None)):
-    '''
-    Plays the video or something
-    '''
-    pass
+# @app.command()
+# def play(root: str = typer.Argument(None)):
+#     '''
+#     Plays the video or something
+#     '''
+#     pass
 
 
 if __name__ == "__main__":

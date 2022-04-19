@@ -14,7 +14,8 @@ from pathlib import Path
 from urllib.request import urlretrieve  # Using this to download thumbnails
 
 file_types = {"video", "caption", "audio", "thumbnail"} # TODO download js and raw html?
-resolutions = ["highest", "lowest", "144p", "240p", "360p", "480p", "720p", "1080p", "1440p", "2160p", "4320p"] # Stored as a list because order is important
+# Order resolutions from highest to lowest in a list
+resolutions = ["2160p", "1440p", "1080p", "720p", "480p", "360p", "240p", "144p"] # Stored as a list because order is important
 sub_types = ["mp4", "webm"]    # Prefer mp4 over webm
 resolution_to_itags = {
     "144p": {}, "240p": {}, "360p": {}, "480p": {}, "720p": {},
@@ -24,15 +25,45 @@ resolution_to_itags = {
 def get_stream(yt: YouTube, file_type: str, options: dict) -> Stream:
     '''
     Applies all the filters and gets a stream object
-    # TODO this implements a fix that is not in pytube right now so it is in my wkrettek repo,
-    Need to implement myself until pytube is updated
     '''
     subtype = "mp4" # This is the subtype we're gonna go with
+    if "resolution" in options: resolution = options["resolution"]  # Get the resolution from the options
     if file_type == "audio":
         stream = yt.streams.filter(only_audio=True, subtype=subtype).order_by("abr").desc()
     else:
         stream = yt.streams.get_highest_resolution()
     return stream
+
+def get_video_stream(yt: YouTube, options: dict) -> Stream:
+    '''
+    Gets the video stream from the video
+    '''
+    if "resolution" in options:             # If resolution is specified
+        resolution = options["resolution"]  # Get the resolution from the options
+    else:
+        return yt.streams.self.filter(progressive=True, sub_type="mp4").order_by("resolution").last()  # Else, get the highest res progressive stream (usually 720p)
+    stream = None       # Initialize the stream
+    while not stream:   # Until we find a good one
+        streams = yt.streams.filter(subtype="mp4", resolution=resolution) # Filter streams by resolution
+        stream = next(iter(streams), None)  # Get the first stream or none if there is no stream
+    return stream
+
+def get_audio_stream(yt: YouTube, options: dict) -> Stream:
+    '''
+    Gets the audio stream from the video
+    '''
+    return yt.streams.get_audio_only()  # This returns the highest bitrate audio stream by default
+
+def get_filesize(yt: YouTube, options: dict) -> int:
+    '''
+    Gets the filesize of the video
+    '''
+    video_stream = get_video_stream(yt, options)        # Get the video stream
+    filesize = video_stream.filesize                    # Determine the video filesize
+    if not video_stream.includes_audio_track:           # If it doesn't include an audio track
+        audio_stream = get_audio_stream(yt, options)    # Get the audio stream
+        filesize += audio_stream.filesize               # Add the audio_stream filesize
+    return filesize
 
 def download_stream(stream: Stream, path: str, filename: str, options: dict) -> bool:
     '''
