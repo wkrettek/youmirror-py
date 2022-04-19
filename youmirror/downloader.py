@@ -120,10 +120,13 @@ def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
     Stream looks like yt.streams.filter(only_audio=True, subtype="mp4").desc()
     Audio files are coming out too long, so we want to trim it to the reported length if it is longer
     '''
-    options["dl_audio"] = True
     try:
-        stream = get_stream(yt, "audio", options)
-        download_stream(stream, path, filename, options)
+        length = yt.length                                  # Get the length of the video
+        stream = get_stream(yt, "audio", options)           # Get the audio stream
+        download_stream(stream, path, filename, options)    # Download the audio stream
+        if options["has_ffmpeg"]:                           # TODO If they have ffmpeg, trim the audio
+            pass
+            # subprocess.run(["ffmpeg", "-y", "-i", f"{path}{filename}", "-ss", "00:00:00", "-t", f"{length}", f"{path}{filename}"])
     except Exception as e:
         logging.exception(f'Could not download video {filename}')
 
