@@ -66,10 +66,32 @@ def combine_video_audio(video_file: str, audio_file: str) -> str:
     Path(temp).unlink()           # Delete the temp video file
     return video_file
 
-
-def get_filesize(yt: YouTube, file_type: str, options: dict) -> int:
+def calculate_video_filesize():
     '''
-    Gets the filesize of the video
+    Calculates the size of a video file
+    '''
+    pass
+
+def calculate_audio_filesize():
+    '''
+    Calculates the size of an audio file
+    '''
+    pass
+
+def calculate_caption_filesize():
+    '''
+    Calculates the size of a caption file
+    '''
+
+def calculate_thumbnail_filesize():
+    '''
+    Calculates the size of a thumbnail file
+    '''
+
+
+def calculate_filesize(yt: YouTube, file_type: str, options: dict) -> int:
+    '''
+    Gets the size of the file type 
     '''
     video_stream = get_video_stream(yt, options)        # Get the video stream
     filesize = video_stream.filesize                    # Determine the video filesize

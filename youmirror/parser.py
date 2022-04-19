@@ -11,6 +11,7 @@ using pytube's
 from pytube import YouTube, Channel, Playlist, extract
 from typing import Union, Any, Callable
 import youmirror.helper as helper
+from pathlib import Path
 import logging
 
 yt_type_to_string = {Channel: "channel", Playlist: "playlist", YouTube: "single"}    # Translation dict for convenience
@@ -163,7 +164,7 @@ def is_available(yt: YouTube) -> bool:
         return False
 
 
-def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, filetree: dict) -> dict:
+def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, paths: dict, files: dict) -> dict:
     '''
     Gets the keys that we want to put into the database and returns as a dictionary
             Channels/Playlists
@@ -199,7 +200,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, f
         for file_type in to_download:
             if to_download[file_type]:
                 path = helper.calculate_path(yt_string, keys["name"], "")
-                path = helper.resolve_collision(path, filetree, yt_id)
+                path = helper.resolve_collision(path, paths | files, yt_id)
                 keys["paths"].add(path)
         return keys
 
@@ -214,10 +215,17 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, f
 
         for file_type in to_download:           # We want to check which file types to download
             if to_download[file_type]:          # If that type is set to true
-                filepath = helper.calculate_filepath(file_type, yt_string, keys["parent_name"], keys["name"])
+                if "path" in keys:
+                    path = keys["path"]
+                else:
+                    path = helper.calculate_path(keys["parent_type"], keys["parent_name"], keys["name"])
+                    path = helper.resolve_collision(path, paths, yt_id)
+                filename = helper.calculate_filename(file_type, keys["name"])
+                filepath = str(Path(path)/Path(filename))
                 # TODO pass down parent's path to calculate_filepath
-                filepath = helper.resolve_collision(filepath, filetree, yt_id)
+                filepath = helper.resolve_collision(filepath, paths | files, yt_id)
                 keys["files"].add(filepath)
         return keys
     else: 
         logging.error(f"Failed to get keys for {yt}")
+        return None

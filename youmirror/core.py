@@ -142,8 +142,10 @@ class YouMirror:
 
         # Add the items to the database
         to_download: list[YouTube] = []     # List of items to download
+        paths = {}                          # Local dict of paths before we commit to db
+        files = {}                          # Local dict of files before we commit to db
         for item in to_add:                 # Search through all the pytube objects we want to add
-            keys = parser.get_keys(item, dict(), active_options, dict())    # Get all the keys to add to the table
+            keys = parser.get_keys(item, dict(), active_options, paths_table | paths, files_table | files)    # Get all the keys to add to the table
             print(f'Adding \'{keys["name"]}\'')
             table = string_to_table[yt_string]  # Get the appropriate table for the object
             table[id] = keys                    # Add the item to the database
@@ -162,7 +164,7 @@ class YouMirror:
                 item_path = next(iter(keys["paths"]))           # Get a calculated path from the keys
                 item_path = item_path.split("/")[1:]            # Split the first bit off
                 item_path = "/".join(item_path)                 # Join the list back together
-                paths_table[item_path] = {"type": "path"}    # Record the path in the filetree table
+                paths_table[item_path] = {"type": "path"}       # Record the path in the filetree table
 
                 # Get parent info to pass to children   
                 parent_id = parser.get_id(item)     # Get parent's id
@@ -203,7 +205,7 @@ class YouMirror:
             for file in filez:
                 file_type = file
                 filezz = file.keys()
-            download_size += downloader.get_filesize(item,  active_options)
+            download_size += downloader.calculate_filesize(item,  active_options)
 
         # Show download size & ask for confirmation
         if not kwargs.get("force", False):
@@ -212,6 +214,9 @@ class YouMirror:
             if input("Continue? (y/n) ") != "y":                    # Get confirmation
                 print("Aborting")
                 return
+
+        files_table.update(files)
+        paths_table.update(paths)
 
         # Commit to database
         '''
@@ -344,11 +349,19 @@ class YouMirror:
         #         key = parse.quote_plus(url)             # Make the key good for sqlite    
         #         singles[key] = {"url": url, "filepath": filepath}   # Add to sqlite
 
-    def check(
+    def update(
         self
         ) -> None:
         '''
-        Verifies which videos in the mirror are still available from Youtube
+        Updates the database without downloading anything
+        '''
+        pass
+
+    def verify(
+        self
+        ) -> None:
+        '''
+        Verifies the integrity of the mirror (somehow)
         '''
         pass
 
