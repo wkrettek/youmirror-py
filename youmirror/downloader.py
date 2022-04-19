@@ -67,7 +67,7 @@ def combine_video_audio(video_file: str, audio_file: str) -> str:
     return video_file
 
 
-def get_filesize(yt: YouTube, options: dict) -> int:
+def get_filesize(yt: YouTube, file_type: str, options: dict) -> int:
     '''
     Gets the filesize of the video
     '''
@@ -82,7 +82,6 @@ def download_stream(stream: Stream, path: str, filename: str, options: dict) -> 
     '''
     Downloads to the given filepath and returns if a new file was downloaded or not
     '''
-    # filename = filename + ".mp4"
     stream.download(output_path=path, filename=filename) # Download to the appropriate path and name
     return True
 
@@ -108,10 +107,15 @@ def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> st
     Probably should just implement it in this library until pytube is updated
     '''
     # TODO handle for different languages
+    captions_types = ["a.en, en"]
     captions = yt.caption_tracks
-    for i, c in enumerate(captions):
-        c.download(output_path=path, title=filename+str(i)) # Adding the index to the filename for now
-    return filename
+    for c_type in captions_types:
+        if c_type in filename:
+            if c_type in captions:
+                caption = captions[c_type]
+                caption.download(output_path=path, title=filename) # Adding the index to the filename for now
+                return filename
+    return None
 
 def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
     '''

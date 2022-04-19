@@ -6,7 +6,7 @@ authors = ["wkrettek <warrenkrettek@gmail.com>"]
 license = "MIT"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.8"
 typer = "^0.4.1"
 sqlitedict = "^2.0.0"
 toml = "^0.10.2"

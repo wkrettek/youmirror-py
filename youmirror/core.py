@@ -19,7 +19,7 @@ from the videos and waiting for youtube to respond. There might be other async
 optimizations I'm not seeing too
 '''
 
-logging.basicConfig(level=logging.INFO)
+# logging.basicConfig(level=logging.INFO)
 
 class YouMirror:
     '''
@@ -144,7 +144,7 @@ class YouMirror:
         to_download: list[YouTube] = []     # List of items to download
         for item in to_add:                 # Search through all the pytube objects we want to add
             keys = parser.get_keys(item, dict(), active_options, dict())    # Get all the keys to add to the table
-            print("Keys:", keys)
+            print(f'Adding \'{keys["name"]}\'')
             table = string_to_table[yt_string]  # Get the appropriate table for the object
             table[id] = keys                    # Add the item to the database
             logging.info(f"Adding {url} to the database")
@@ -158,6 +158,7 @@ class YouMirror:
 
             # Handle children
             if "children" in keys:                              # If any children appeared when we got keys
+                print(f'Found {len(keys["children"])} Youtube videos')
                 item_path = next(iter(keys["paths"]))           # Get a calculated path from the keys
                 item_path = item_path.split("/")[1:]            # Split the first bit off
                 item_path = "/".join(item_path)                 # Join the list back together
@@ -177,8 +178,9 @@ class YouMirror:
                     child_id = parser.get_id(child)     # Get the id for the single
 
                     child_keys = parser.get_keys(child, child_keys, active_options, files_table) # Get the rest of the keys from the pytube object
+                    print(f'Adding \'{child_keys["name"]}\'')
                     # print("Child keys:", child_keys)
-                    print(f'Adding child {child_id} and {child_keys} to singles table')
+                    # print(f'Adding child {child_id} and {child_keys} to singles table')
                     singles_table[child_id] = child_keys    # Add child to the database
                     logging.info(f"Adding {child} to the database")
                     files = child_keys["files"]             # Get the files from the keys
@@ -186,23 +188,22 @@ class YouMirror:
                         files_table[file] = {"type": "file"}
                         logging.info(f"Adding {file} to the database")  
 
-        # Commit to database
-        '''
-        for file in files:
-            filetree_table[file] = {"type": "file"}
-        logging.info(f"Adding {file} to the database")  
-        '''
-
         # Check if downloading is skipped
         if kwargs.get("no_dl", False):
             print("Skipping download")
+            # Commit to database
             configurer.save_config(config_path, self.config)    # Save the config
             return
 
         # Calculate download size
         download_size: int = 0
         for item in to_download:
-            download_size += downloader.get_filesize(item, active_options)
+            id = parser.get_id(item)    # Get the id
+            filez = files[id]           # This will return a dict
+            for file in filez:
+                file_type = file
+                filezz = file.keys()
+            download_size += downloader.get_filesize(item,  active_options)
 
         # Show download size & ask for confirmation
         if not kwargs.get("force", False):
@@ -211,6 +212,13 @@ class YouMirror:
             if input("Continue? (y/n) ") != "y":                    # Get confirmation
                 print("Aborting")
                 return
+
+        # Commit to database
+        '''
+        for file in files:
+            filetree_table[file] = {"type": "file"}
+        logging.info(f"Adding {file} to the database")  
+        '''
 
         # Update config file
         configurer.save_config(config_path, self.config)
