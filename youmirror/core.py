@@ -132,11 +132,11 @@ class YouMirror:
         to_add.append(yt)                                            # Mark it for adding
 
         # Open the database tables
-        channels_table = databaser.get_table(db_path, "channels")
-        playlists_table = databaser.get_table(db_path, "playlists")
-        singles_table = databaser.get_table(db_path, "singles")
-        paths_table = databaser.get_table(db_path, "paths")
-        files_table = databaser.get_table(db_path, "files")
+        channels_table = databaser.get_table(db_path, "channels")   # I don't think we need to open this until committing
+        playlists_table = databaser.get_table(db_path, "playlists") # I don't think we need to open this until committing
+        singles_table = databaser.get_table(db_path, "singles")     # I don't think we need to open this until committing
+        paths_table = databaser.get_table(db_path, "paths")         # Need this to resolve collisions
+        files_table = databaser.get_table(db_path, "files")         # Need this to resolve collisions
 
         string_to_table = {"channel": channels_table, "playlist": playlists_table, "single": singles_table, "path": paths_table, "file": files_table}  # Translation dict for pytube type to db table
 

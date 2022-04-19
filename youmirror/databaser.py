@@ -35,6 +35,7 @@ db
         | -- name:      filepath "singles/single_name/single_name.mp4"
         | -- parent:    id of parent single
         | -- type:      file type: "video", "audio", "caption", "thumbnail"
+        | -- caption_type: "en, a.en, fr"
         | - downloaded: True/False
         | -- size:      file size
 # TODO 

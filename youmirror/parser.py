@@ -153,6 +153,32 @@ def get_children(yt: Union[Channel, Playlist]) -> list[str]:
         logging.exception(f"Failed to get children for {get_name(yt)} due to {e}")
         return None
 
+def get_files(path: str, yt_name: str, options: dict) -> dict:
+    '''
+    Returns a dict of file types and filenames we want to download
+    files = {"video": ["singles/single_name/single_name.mp4"], "audio": [""], "caption": [""], "thumbnail" [""]}
+    '''
+    to_download = { # Returns true/false if we want to download the video
+        "video": options["dl_video"], 
+        "audio": options["dl_audio"], 
+        "caption": options["dl_captions"], 
+        "thumbnail": options["dl_thumbnail"]
+    }
+    files = {"video": [], "audio": [], "caption": [], "thumbnail": []}
+    for file_type in to_download:
+        if to_download[file_type]:   # Check the boolean value matching the file_type
+            if file_type == "caption":
+                for caption_type in options["captions"]:    # We can download multiple caption types
+                    filename = helper.calculate_filename(file_type, f'{yt_name}_{caption_type}')    # Add f'_{caption_type}'
+                    filepath = str(Path(path)/filename)     # Append the path to the filename
+                    files[file_type].append(filepath)       # Add to files               
+            else:
+                filename = helper.calculate_filename(file_type, yt_name)    # Calculate the filename
+                filepath = str(Path(path)/filename)                              # Append the path to the filename
+                files[file_type].append(filepath)
+
+    return files
+
 def is_available(yt: YouTube) -> bool:
     '''
     Returns whether a given pytube object is available
@@ -178,7 +204,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
                 name        Video title
                 type        AKA parent type
                 parent      Parent's id
-                available   uses pytube's is_available(0)
+                available   uses pytube's is_available()
                 files       
     You can pass in a dict if you want to inject some values from above
     This is going to be a heavy function that calls from a lot of places. It's calculating a lot of things
@@ -189,43 +215,47 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
         "caption": options["dl_captions"], 
         "thumbnail": options["dl_thumbnail"]
     }
-
     yt_string = yt_to_type_string(yt)   # Get the type as a string
     metadata = get_metadata(yt)         # Strip the useful data off the pytube object
     keys.update(metadata)               # Add to our keys
     yt_id = get_id(yt)                  # We use this to resolve collisions
 
     if yt_string in ["channel", "playlist"]:    # Do the same stuff for channels and playlists
-        keys["paths"] = set()
         for file_type in to_download:
             if to_download[file_type]:
                 path = helper.calculate_path(yt_string, keys["name"], "")
-                path = helper.resolve_collision(path, paths | files, yt_id)
-                keys["paths"].add(path)
+                keys["path"] = helper.resolve_collision(path, paths | files, yt_id)
         return keys
 
     elif yt_string == "single":
         if "parent_name" not in keys:           # Check if the parent name is already in the keys
             keys["parent_name"] = ""            # Parent's name is empty if it's a single
+
         if "parent_type" not in keys:           # Check if the parent type is already in the keys
             keys["parent_type"] = "single"      # Parent's type is single if it's a single
         else:
             yt_string = keys["parent_type"]     # We are resetting the type to the parent type
-        keys["files"] = set()                   # Gonna add the files to this later
 
-        for file_type in to_download:           # We want to check which file types to download
-            if to_download[file_type]:          # If that type is set to true
-                if "path" in keys:
-                    path = keys["path"]
-                else:
-                    path = helper.calculate_path(keys["parent_type"], keys["parent_name"], keys["name"])
-                    path = helper.resolve_collision(path, paths, yt_id)
-                filename = helper.calculate_filename(file_type, keys["name"])
-                filepath = str(Path(path)/Path(filename))
-                # TODO pass down parent's path to calculate_filepath
-                filepath = helper.resolve_collision(filepath, paths | files, yt_id)
-                keys["files"].add(filepath)
+        if "path" in keys:                      # If we were passed a path, use it
+            path = keys["path"]
+        else:                                   # Else, calculate a new one
+            keys["path"] = helper.calculate_path(yt_string, keys["parent_name"], keys["name"])
+
+        keys["files"] = get_files(path, keys["name"], options)  # Get the files for this video
+
+        # for file_type in to_download:           # We want to check which file types to download
+        #     if to_download[file_type]:          # If that type is set to true
+        #         if "path" in keys:
+        #             path = keys["path"]
+        #         else:
+        #             path = helper.calculate_path(keys["parent_type"], keys["parent_name"], keys["name"])
+        #             path = helper.resolve_collision(path, paths, yt_id)
+        #         filename = helper.calculate_filename(file_type, keys["name"])
+        #         filepath = str(Path(path)/Path(filename))
+        #         # TODO pass down parent's path to calculate_filepath
+        #         filepath = helper.resolve_collision(filepath, paths | files, yt_id)
+        #         keys["files"].add(filepath)
         return keys
     else: 
-        logging.error(f"Failed to get keys for {yt}")
+        logging.error(f"Failed to get keys for {yt_string} {yt}")
         return None
