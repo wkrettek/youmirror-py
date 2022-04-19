@@ -15,10 +15,9 @@ from datetime import datetime
 from pathlib import Path
 
 defaults = {                # These are the default global configs if not specified
-    "resolution": "highest",   # What type of video resolution to download
     "dry_run": False,       # Dry run means don't download automatically
     "dl_video": True,       # Whether to download video
-    "dl_captions": True,   # Whether to download captions
+    "dl_captions": False,   # Whether to download captions
     "dl_audio": False,      # Whether to download audio
     "dl_thumbnail": False,  # Whether to download the thumbnail
     "captions": ["en", "a.en"]  # Which caption types to check for

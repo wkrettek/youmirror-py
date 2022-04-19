@@ -3,6 +3,7 @@ import youmirror.downloader as downloader
 import youmirror.helper as helper
 import youmirror.configurer as configurer
 import youmirror.databaser as databaser
+import youmirror.printer as printer
 import logging              # Logging
 from typing import Union    # For typing
 from pytube import YouTube, Channel, Playlist
@@ -84,8 +85,13 @@ class YouMirror:
         active_options = configurer.defaults                                # Load default options
         global_options = configurer.get_options("youmirror", self.config)   # Get global options
         active_options.update(global_options)                               # Overwrite with globals
-        active_options.update(kwargs)                                     # Overwrite with command line options
+        active_options.update(kwargs)                                       # Overwrite with command line options
+        if "resolution" in active_options and active_options["resolution"] not in downloader.resolutions:
+            logging.error(f"Invalid resolution \'{active_options['resolution']}\', valid resolutions = {downloader.resolutions}")
+            return
         logging.debug("Active options:", active_options)
+        active_options["had_ffmpeg"] = shutil.which("ffmpeg") is not None
+        # self.config.update({"resolution": active_options["resolution"]})
 
         # Parse the url & create pytube object
         try:
@@ -199,38 +205,23 @@ class YouMirror:
 
         # Show download size & ask for confirmation
         if not kwargs.get("force", False):
-            download_size = helper.human_readable(download_size)
+            download_size = printer.human_readable(download_size)   # Convert to human readable
             print(f'Downloading will add {download_size} bytes to the mirror')
-            if input("Continue? (y/n) ") != "y":
+            if input("Continue? (y/n) ") != "y":                    # Get confirmation
                 print("Aborting")
                 return
 
         # Update config file
         configurer.save_config(config_path, self.config)
 
-        # Download all the files
-        for item in to_download:
-            streams = parser.get_streams(item)
-            for stream in streams:
-                if stream.resolution in kwargs["resolution"]:
-                    to_download.append(stream)
-                    logging.info(f"Adding {stream} to the download queue")
-                    print(f"Adding {stream} to the download queue")
-                    self.download_size += stream.filesize
-                    self.download_size_string = human_readable_size(self.download_size)
-                    print(f"Download size: {self.download_size_string}")
-                    logging.info(f"Download size: {self.download_size_string}")
-        downloader.get_stream()                                  
-
-        # If not forced, report how much downloading there is to do and ask for confirmation
-        if not kwargs.get("no_dl", False):    # Check for a dry run
-            for item in to_download:            # Search through all the pytube objects we want to download
-                id = parser.get_id(item)        # Get the id
-                files = singles_table[id]["files"]  # Get the files from the database
-                for file in files:                  # Search through all the files
-                    if not Path(file).exists():     # If the file doesn't exist
-                        file = str(path/Path(file)) # Inject the root that was passed from the add() function call
-                        downloader.download_single(item, file, active_options) # Download it
+        # Download all the files                                 
+        for item in to_download:            # Search through all the pytube objects we want to download
+            id = parser.get_id(item)        # Get the id
+            files = singles_table[id]["files"]  # Get the files from the database
+            for file in files:                  # Search through all the files
+                if not Path(file).exists():     # If the file doesn't exist
+                    file = str(path/Path(file)) # Inject the root that was passed from the add() function call
+                    downloader.download_single(item, file, active_options) # Download it
 
     def remove(
         self,

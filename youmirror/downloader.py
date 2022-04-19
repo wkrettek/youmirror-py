@@ -8,6 +8,7 @@ My first priority is finding the best matching resolution when the user specifie
 I could maybe make other types of downloads available. I think a possible one is like a metadata and another one is like the js. Could be useful
 
 '''
+from operator import indexOf
 from pytube import YouTube, StreamQuery, Stream, Caption, request
 import logging
 from pathlib import Path
@@ -41,18 +42,20 @@ def get_video_stream(yt: YouTube, options: dict) -> Stream:
     if "resolution" in options:             # If resolution is specified
         resolution = options["resolution"]  # Get the resolution from the options
     else:
-        return yt.streams.self.filter(progressive=True, sub_type="mp4").order_by("resolution").last()  # Else, get the highest res progressive stream (usually 720p)
+        return yt.streams.filter(progressive=True, subtype="mp4").order_by("resolution").last()  # Else, get the highest res progressive stream (usually 720p)
     stream = None       # Initialize the stream
+    find_res = iter(resolutions[resolutions.index(resolution):]) # Iterate through the resolutions
     while not stream:   # Until we find a good one
         streams = yt.streams.filter(subtype="mp4", resolution=resolution) # Filter streams by resolution
         stream = next(iter(streams), None)  # Get the first stream or none if there is no stream
+        resolution = next(find_res) # Get the next resolution
     return stream
 
 def get_audio_stream(yt: YouTube, options: dict) -> Stream:
     '''
     Gets the audio stream from the video
     '''
-    return yt.streams.get_audio_only()  # This returns the highest bitrate audio stream by default
+    return yt.streams.get_audio_only()  # This returns the highest bitrate audio stream by default (mp4)
 
 def get_filesize(yt: YouTube, options: dict) -> int:
     '''
@@ -78,7 +81,8 @@ def download_video(yt: YouTube, path: str, filename: str, options: dict) -> None
     Gets the proper stream for video and downloads it
     '''
     try:
-        stream = get_stream(yt, "video", options)     # Get stream with applied filters
+        # stream = get_stream(yt, "video", options)     # Get stream with applied filters
+        stream = get_video_stream(yt, options)        # Get the video stream
         download_stream(stream, path, filename, options)
     except Exception as e:
         logging.exception(f'Could not download video at {str(path) + filename}')
