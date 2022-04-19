@@ -15,6 +15,7 @@ def sync(
     url : str,
     root : str = typer.Argument(None, help="The root directory to sync to, default=\'./\'"),
     dry_run : Optional[bool] = typer.Option(default=False, show_choices=False, help="Calculates changes with no execution"),
+    no_update :Optional[bool] = typer.Option(default=False, show_choices=False, help="Syncs the mirror without updating"),
     ):
     '''
     Syncs the filetree to the database
@@ -70,12 +71,16 @@ def remove(
 #     '''
 #     return
 
-# @app.command()
-# def update(root : str = typer.Argument(None)):
-#     '''
-#     Checks if new files were added to channels or playlists and downloads them
-#     '''
-#     return
+@app.command()
+def update(
+    root : Optional[str] = typer.Argument(default=None, help='Root directory for the mirror'),
+    ):
+    '''
+    Checks if new files were added to channels or playlists and updates mirror database
+    '''
+    ym = YouMirror()
+    ym.update(root)
+
 
 @app.command()
 def show(root: str = typer.Argument(None)):

@@ -1,3 +1,4 @@
+from turtle import update
 import youmirror.parser as parser
 import youmirror.downloader as downloader
 import youmirror.helper as helper
@@ -86,12 +87,13 @@ class YouMirror:
         global_options = configurer.get_options("youmirror", self.config)   # Get global options
         active_options.update(global_options)                               # Overwrite with globals
         active_options.update(kwargs)                                       # Overwrite with command line options
-        if "resolution" in active_options and active_options["resolution"] not in downloader.resolutions:
-            logging.error(f"Invalid resolution \'{active_options['resolution']}\', valid resolutions = {downloader.resolutions}")
+        if active_options["resolution"] not in downloader.resolutions:
+            logging.error(f"Invalid resolution \'{active_options['resolution']}\', valid resolutions = {downloader.resolutions}")                                      # Validate resolution
             return
-        logging.debug("Active options:", active_options)
         active_options["has_ffmpeg"] = shutil.which("ffmpeg") is not None   # Record whether they have ffmpeg
         # self.config.update({"resolution": active_options["resolution"]})
+        logging.debug("Active options:", active_options)
+
 
         # Parse the url & create pytube object
         try:
@@ -119,7 +121,7 @@ class YouMirror:
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
         specs = {"name": name, "url": url, "last_updated": last_updated}
-        if "resolution" in kwargs: specs["resolution"] = kwargs["resolution"]
+        specs["resolution"] = kwargs["resolution"]  # Put resolution into configs
         
         # Add the id to the config
         to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add
@@ -145,7 +147,7 @@ class YouMirror:
         paths = {}                          # Local dict of paths before we commit to db
         files = {}                          # Local dict of files before we commit to db
         for item in to_add:                 # Search through all the pytube objects we want to add
-            keys = parser.get_keys(item, dict(), active_options, paths_table | paths, files_table | files)    # Get all the keys to add to the table
+            keys = parser.get_keys(item, dict(), active_options, paths_table)    # Get all the keys to add to the table
             print(f'Adding \'{keys["name"]}\'')
             table = string_to_table[yt_string]  # Get the appropriate table for the object
             table[id] = keys                    # Add the item to the database
@@ -259,6 +261,7 @@ class YouMirror:
             return
         if not db_path.is_file():                               # Verify the database file exists
             logging.error(f'Could not find database file in root directory \'{path}\'')
+            return
         self.config = configurer.load_config(config_path)       # Load the config file
         
         # Parse the url & create pytube object
@@ -318,6 +321,8 @@ class YouMirror:
         if not root:
             root = self.root
 
+        self.update(root)
+
         # Config setup
         path = Path(root)
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
@@ -328,6 +333,7 @@ class YouMirror:
             return
         if not db_path.is_file():                               # Verify the database file exists
             logging.error(f'Could not find database file in root directory \'{path}\'')
+            return
         self.config = configurer.load_config(config_path)       # Load the config file
 
         to_download = list()    # Make a list of videos to download
@@ -350,12 +356,50 @@ class YouMirror:
         #         singles[key] = {"url": url, "filepath": filepath}   # Add to sqlite
 
     def update(
-        self
+        self,
+        root: str = None
         ) -> None:
         '''
         Updates the database without downloading anything
         '''
-        pass
+        if not root:
+            root = self.root
+
+        # Config setup
+        path = Path(root)
+        config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
+        db_path = path/Path(self.db)                # Get the db file & ensure it exists
+
+        if not config_path.is_file():                           # Verify the config file exists   
+            logging.error(f'Could not find config file in root directory \'{path}\'')
+            return
+        if not db_path.is_file():                               # Verify the database file exists
+            logging.error(f'Could not find database file in root directory \'{path}\'')
+            return
+        self.config = configurer.load_config(config_path)       # Load the config file
+
+        channels = configurer.get_options("channel", self.config)   # Load channels
+        playlists = configurer.get_options("channel", self.config)   # Load channels
+
+        channels_table = databaser.get_table(db_path, "channels")   # Load channels table
+        playlists_table = databaser.get_table(db_path, "playlists") # Load playlists table
+
+        for id in channels:
+            channel = channels[id]
+            print("id ==", id)
+            url = channel["url"]    # Get the url
+            print("url ==" ,url)
+            yt = parser.get_pytube(url)  # Get the pytube object
+            children = parser.get_children(yt)      # Get children urls
+            db_channel = channels_table[id] # Get the channel from the db
+            db_children = db_channel["children"]    # Get the children in the database
+            print(len(children) == len(db_children)) # Determine whether there are new videos
+            if len(children) != len(db_children):    # If there are new videos, add them to the database
+                db_children.update(children)
+
+
+        print("All set!")
+        return
 
     def verify(
         self

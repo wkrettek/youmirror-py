@@ -190,7 +190,7 @@ def is_available(yt: YouTube) -> bool:
         return False
 
 
-def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, paths: dict, files: dict) -> dict:
+def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, paths: dict) -> dict:
     '''
     Gets the keys that we want to put into the database and returns as a dictionary
             Channels/Playlists
@@ -221,10 +221,8 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
     yt_id = get_id(yt)                  # We use this to resolve collisions
 
     if yt_string in ["channel", "playlist"]:    # Do the same stuff for channels and playlists
-        for file_type in to_download:
-            if to_download[file_type]:
-                path = helper.calculate_path(yt_string, keys["name"], "")
-                keys["path"] = helper.resolve_collision(path, paths | files, yt_id)
+        path = helper.calculate_path(yt_string, keys["name"], "")
+        keys["path"] = helper.resolve_collision(path, paths, yt_id)
         return keys
 
     elif yt_string == "single":
@@ -236,11 +234,11 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
         else:
             yt_string = keys["parent_type"]     # We are resetting the type to the parent type
 
-        if "path" in keys:                      # If we were passed a path, use it
-            path = keys["path"]
-        else:                                   # Else, calculate a new one
-            keys["path"] = helper.calculate_path(yt_string, keys["parent_name"], keys["name"])
+        if "path" not in keys:                  # If no path was passed, calculate a new one
+            temp = helper.calculate_path(yt_string, "", keys["name"])
+            keys["path"] = helper.resolve_collision(temp, paths, yt_id)
 
+        path = keys["path"]
         keys["files"] = get_files(path, keys["name"], options)  # Get the files for this video
 
         # for file_type in to_download:           # We want to check which file types to download
