@@ -121,8 +121,8 @@ class YouMirror:
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
         specs = {"name": name, "url": url, "last_updated": last_updated}
-        specs["resolution"] = kwargs["resolution"]  # Put resolution into configs
-        
+        if "resolution" in kwargs: specs.update(kwargs["resolution"])   # Add resolution to configs if specified
+
         # Add the id to the config
         to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add
         yt_string = parser.yt_to_type_string(yt)                # Get the yt type string
@@ -139,6 +139,7 @@ class YouMirror:
         singles_table = databaser.get_table(db_path, "singles")     # I don't think we need to open this until committing
         paths_table = databaser.get_table(db_path, "paths")         # Need this to resolve collisions
         files_table = databaser.get_table(db_path, "files")         # Need this to resolve collisions
+        singles = dict()
 
         string_to_table = {"channel": channels_table, "playlist": playlists_table, "single": singles_table, "path": paths_table, "file": files_table}  # Translation dict for pytube type to db table
 
@@ -163,19 +164,11 @@ class YouMirror:
             # Handle children
             if "children" in keys:                              # If any children appeared when we got keys
                 print(f'Found {len(keys["children"])} Youtube videos')
-                item_path = next(iter(keys["paths"]))           # Get a calculated path from the keys
-                item_path = item_path.split("/")[1:]            # Split the first bit off
-                item_path = "/".join(item_path)                 # Join the list back together
-                paths_table[item_path] = {"type": "path"}       # Record the path in the filetree table
-
-                # Get parent info to pass to children   
-                parent_id = parser.get_id(item)     # Get parent's id
-                parent_name = parser.get_name(item) # Get parent's name
 
                 for child in parser.get_children(item):   # We have to get the children again to get urls instead of ids :/
 
-                    child_keys = {"parent_id": parent_id, "parent_name": 
-                    parent_name, "parent_type": yt_string, "path": item_path}       # passing this to get_keys()
+                    child_keys = {"parent_id": id, "parent_name": 
+                    keys["name"], "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
 
                     child = parser.get_pytube(child)    # Wrap those children in pytube objects
                     to_download.append(child)           # Mark this YouTube object for downloading
@@ -183,14 +176,14 @@ class YouMirror:
 
                     child_keys = parser.get_keys(child, child_keys, active_options, files_table) # Get the rest of the keys from the pytube object
                     print(f'Adding \'{child_keys["name"]}\'')
-                    # print("Child keys:", child_keys)
-                    # print(f'Adding child {child_id} and {child_keys} to singles table')
-                    singles_table[child_id] = child_keys    # Add child to the database
+                    singles[child_id] = child_keys
                     logging.info(f"Adding {child} to the database")
-                    files = child_keys["files"]             # Get the files from the keys
-                    for file in files:
-                        files_table[file] = {"type": "file"}
-                        logging.info(f"Adding {file} to the database")  
+                    f = child_keys["files"]             # Get the files from the keys
+                    for file_type in f:
+                        for file in f[file_type]:
+                            filename = file
+                            info = {"type": file_type, "downloaded": False, "parent": child_id, "caption_type": "", "size": ""}
+                            files[filename] = info
 
         # Check if downloading is skipped
         if kwargs.get("no_dl", False):
@@ -217,15 +210,12 @@ class YouMirror:
                 print("Aborting")
                 return
 
-        files_table.update(files)
-        paths_table.update(paths)
 
         # Commit to database
-        '''
-        for file in files:
-            filetree_table[file] = {"type": "file"}
-        logging.info(f"Adding {file} to the database")  
-        '''
+        print("Saving...")
+        files_table.update(files)   # Record the files in the database
+        paths_table.update(paths)   # Record the paths in the database
+        singles_table.update(singles)   # Record all the singles
 
         # Update config file
         configurer.save_config(config_path, self.config)

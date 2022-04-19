@@ -227,7 +227,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
 
     elif yt_string == "single":
         if "parent_name" not in keys:           # Check if the parent name is already in the keys
-            keys["parent_name"] = ""            # Parent's name is empty if it's a single
+            keys["parent_name"] = "None"            # Parent's name is empty if it's a single
 
         if "parent_type" not in keys:           # Check if the parent type is already in the keys
             keys["parent_type"] = "single"      # Parent's type is single if it's a single
@@ -237,22 +237,12 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
         if "path" not in keys:                  # If no path was passed, calculate a new one
             temp = helper.calculate_path(yt_string, "", keys["name"])
             keys["path"] = helper.resolve_collision(temp, paths, yt_id)
-
+        else:   # Take the path and add the name
+            temp = str(Path(keys["path"])/keys["name"])
+            keys["path"] = helper.resolve_collision(temp, paths, yt_id)
+            
         path = keys["path"]
         keys["files"] = get_files(path, keys["name"], options)  # Get the files for this video
-
-        # for file_type in to_download:           # We want to check which file types to download
-        #     if to_download[file_type]:          # If that type is set to true
-        #         if "path" in keys:
-        #             path = keys["path"]
-        #         else:
-        #             path = helper.calculate_path(keys["parent_type"], keys["parent_name"], keys["name"])
-        #             path = helper.resolve_collision(path, paths, yt_id)
-        #         filename = helper.calculate_filename(file_type, keys["name"])
-        #         filepath = str(Path(path)/Path(filename))
-        #         # TODO pass down parent's path to calculate_filepath
-        #         filepath = helper.resolve_collision(filepath, paths | files, yt_id)
-        #         keys["files"].add(filepath)
         return keys
     else: 
         logging.error(f"Failed to get keys for {yt_string} {yt}")
