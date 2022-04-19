@@ -6,14 +6,12 @@ printer
 
 cli
     remove
-        finish it up
+        removes paths
     sync
         Start this after remove
-    Be able to specify more options
-        Like resolution
+        Be able to specify more options
+            Like resolution
     add
-        be able to add multiple urls
-        can specify dry run
 
 Parser
     Be able to rip all the metadata
@@ -22,26 +20,26 @@ Parser
         resolve collision is maybe a database thing?
 
 Helper
-    --- I changed the filetree to what df said which makes sense
-    How to differentiate audio files from video files when they are both mp4?
     Remove spaces from filenames?
     Calculate the size of the file additions and send to printer before downloading
 
 Databaser
+    Files will now be stored as dictionary {"audio": [""], "video": [""], "captions": ["_en","_a.en"]}
+    When downloading, at to files table the type, "video", "audio" etc. and the resolution and bit rate
     Do all commits at once no matter what
         Have to make this happen for filetree integrity
             Or I guess I could just do a check every time if it's been added?
                 Or I could revert like poetry does?
     Wrap up the databasing as much as possible to abstract it from database implementation
         using sqlitedict for now
+    If a file cannot be downloaded. Mark it as not downloaded or something
 
 
 Downloader
-    --- For now I will just provide defaults and deal with the other more crucial parts of the tool, like showing is actually really important
-    Download should be best effort to match (video) resolution
-    Audio should be just default quality, idk if I will really provide any specifiers
+    Download is best effort but maybe could be simplified a bit
     Download specified resolution and combine audio with ffmpeg?
-    There's actually a lot of nuance that can go into this, but the top level api has to be better at passing down the required info to handle different downloading situations
+        --I'm doing this rn. Have to validation test a lot and make sure it doens't call ffmpeg if they don't have it
+    Download audio could take a specified bitrate
 
 
 

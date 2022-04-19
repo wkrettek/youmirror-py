@@ -166,25 +166,19 @@ def is_available(yt: YouTube) -> bool:
 def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, filetree: dict) -> dict:
     '''
     Gets the keys that we want to put into the database and returns as a dictionary
-            Channels
+            Channels/Playlists
                 id
                 name
                 children
                 available
-                paths
-            Playlists
-                id
-                name
-                children
-                available
-                paths
+                path
             Singles
-                id
-                name
+                id          id from url
+                name        Video title
                 type        AKA parent type
                 parent      Parent's id
-                available
-                files
+                available   uses pytube's is_available(0)
+                files       
     You can pass in a dict if you want to inject some values from above
     This is going to be a heavy function that calls from a lot of places. It's calculating a lot of things
     '''

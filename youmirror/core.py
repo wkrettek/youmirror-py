@@ -153,7 +153,7 @@ class YouMirror:
                 to_download.append(item)    # Mark it for downloading
                 files = keys["files"]       # Get the files from the keys
                 for file in files:
-                    filetree_table[file] = {"type": "file"}
+                    files_table[file] = {"type": "file"}
                     logging.info(f"Adding {file} to the database")
 
             # Handle children
@@ -161,7 +161,7 @@ class YouMirror:
                 item_path = next(iter(keys["paths"]))           # Get a calculated path from the keys
                 item_path = item_path.split("/")[1:]            # Split the first bit off
                 item_path = "/".join(item_path)                 # Join the list back together
-                filetree_table[item_path] = {"type": "path"}    # Record the path in the filetree table
+                paths_table[item_path] = {"type": "path"}    # Record the path in the filetree table
 
                 # Get parent info to pass to children   
                 parent_id = parser.get_id(item)     # Get parent's id
@@ -176,14 +176,14 @@ class YouMirror:
                     to_download.append(child)           # Mark this YouTube object for downloading
                     child_id = parser.get_id(child)     # Get the id for the single
 
-                    child_keys = parser.get_keys(child, child_keys, active_options, filetree_table) # Get the rest of the keys from the pytube object
+                    child_keys = parser.get_keys(child, child_keys, active_options, files_table) # Get the rest of the keys from the pytube object
                     # print("Child keys:", child_keys)
                     print(f'Adding child {child_id} and {child_keys} to singles table')
                     singles_table[child_id] = child_keys    # Add child to the database
                     logging.info(f"Adding {child} to the database")
                     files = child_keys["files"]             # Get the files from the keys
                     for file in files:
-                        filetree_table[file] = {"type": "file"}
+                        files_table[file] = {"type": "file"}
                         logging.info(f"Adding {file} to the database")  
 
         # Commit to database
@@ -296,39 +296,32 @@ class YouMirror:
     
     def sync(
         self,
-        config_file: str
+        root: str = None,
         ) -> None:
         '''
         Syncs the mirror against the config file
         '''
-        # Search for json file
-        # If it exists
-            # Switch to the directory 
+
+        if not root:
+            root = self.root
+
+        # Config setup
+        path = Path(root)
+        config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
+        db_path = path/Path(self.db)                # Get the db file & ensure it exists
+
+        if not config_path.is_file():                           # Verify the config file exists   
+            logging.error(f'Could not find config file in root directory \'{path}\'')
+            return
+        if not db_path.is_file():                               # Verify the database file exists
+            logging.error(f'Could not find database file in root directory \'{path}\'')
+        self.config = configurer.load_config(config_path)       # Load the config file
+
         to_download = list()    # Make a list of videos to download
-        # Check if the database exists
-            # If no database, create a new one
-        # conn = databaser.connect_db(self.dbpath)
-        # db = SqliteDict(self.dbpath)
-        # Look through channels
-            # For each video in channel
-                # Compare against database
-                    # If file does not exist
-                        # Mark video for download
-        # Look through playlists
-            # For each video in playlist
-                # Compare against database
-        # Look through singles
-        # Check if table exists
-        # if not databaser.table_exists(conn, 'singles'):
-        #     databaser.create_table(conn, 'singles')
-        # Mark singles for download
-        # singles = SqliteDict(self.dbpath, tablename='singles', autocommit=True)
-        # for single in self.singles:
-        #     # Compare against database
-        #     url = single['url']
-        #     print(single)
-        #     if key not in singles:
-        #         to_download.append(single)
+
+        channels = self.config["channel"]   # Get all the channels
+        playlists = self.config["playlist"] # Get all the playlists
+        singles = self.config["single"]     # Get all the singles
 
         # print(f"{len(to_download)} Videos to download")
         # # Download videos

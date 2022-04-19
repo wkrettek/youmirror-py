@@ -5,29 +5,37 @@ I've realized that the database is the most important thing in this whole projec
 With the database, you should be able to rebuild the whole filetree.
 This means it should contain data from both the config file and filetree
 db
-| -- youmirror
-        | -- key: primary key (can be whatever)
-        | -- List[configs] the rest of the keys are the configs
 | -- channels
         | -- id:        primary key (comes from channel_uri)
         | -- children:  id (primary key for singles)
-        | -- config:    options dict from config (examples: "resolution" "locked", "extension") 
+        | -- config:    options dict from config (examples: "resolution" "locked") 
+        | -- path:      path "channels/channel_name"
 
 | -- playlists
         | -- id:        primary key
         | -- children:  id (primary key for singles)
-        | -- config:    options dict from config (examples: "resolution" "locked", "extension") 
+        | -- config:    options dict from config (examples: "resolution" "locked") 
+        | -- path:      path "playlists/playlist_name"
 | -- singles
         | -- id:        primary key
         | -- type:      ("channel", "playlist" or "single")
         | -- parent_id: id (primary key for either a channel or playlist or none)
         | -- parent_name: name of the parent
         | -- config:    options dict from config (this will match whatever the parent has if there is one)
-        | -- files:     dictionary that tracks all the files we have # TODO in the future, may make the filenames lists of strings so you can download multiple types, for now let's keep one
-                | --    example: ("video": "/videos/singles/video_name.mp4)
-                | --    example: ("audio": "/videos/singles/video_name.mp3)
-                | --    example: ("caption": "/videos/singles/video_name.srt)
-                | --    example: ("thumbnail": "/videos/singles/video_name.jpg)
+        | -- files
+                | --    example: ("video": ["/videos/singles/video_name.mp4])
+                | --    example: ("audio": ["/videos/singles/video_name_audio.mp4])
+                | --    example: ("caption": ["/videos/singles/video_name_en.srt, /videos/singles/video_name_en.srt_a.en"])
+                | --    example: ("thumbnail": ["/videos/singles/video_name.jpg])
+| --- paths
+        | -- name:      path name "singles/single_name/", "channels/channel_name"
+        | -- size:      total size of files inside
+| --- files:            dictionary that tracks all the files we have
+        | -- name:      filepath
+        | -- type:      file type: "video", "audio", "caption", "thumbnail"
+        | - downloaded: True/False
+        | -- siez:      file size
+
 | --  filetree  We need this to detect collisions, primary key is a path/file
 # TODO 
 I'm not a big fan of sqlite for this and I'd be happy to use something heavier if it's more robust. If I can find a good solution I will likely use that instead.

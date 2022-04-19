@@ -16,6 +16,7 @@ from pathlib import Path
 
 defaults = {                # These are the default global configs if not specified
     "dry_run": False,       # Dry run means don't download automatically
+    "locked":False,         # Make no changes to the item
     "dl_video": True,       # Whether to download video
     "dl_captions": False,   # Whether to download captions
     "dl_audio": False,      # Whether to download audio
