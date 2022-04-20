@@ -3,9 +3,9 @@ Youmirror is an archiving tool built on pytube for creating and managing a mirro
 
 ## Installation
 
-You can install from pypi by using 
+You can install from github by using
 
-`pip install youmirror`
+`pip install git+https://github.com/wkrettek/youmirror.git`
 
 You can also git clone this repository and install with poetry
 

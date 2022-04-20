@@ -6,7 +6,12 @@ printer
 
 cli
     remove
-        removes paths
+        ------ WE FUCKING FINALLY FINISHED IT
+    check
+        Looks through all the playlists and channels
+            Finds children
+            If there are new children
+                Add them to the database
     sync
         Start this after remove
         Be able to specify more options

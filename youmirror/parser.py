@@ -11,6 +11,7 @@ using pytube's
 from pytube import YouTube, Channel, Playlist, extract
 from typing import Union, Any, Callable
 import youmirror.helper as helper
+from pytube.helpers import safe_filename
 from pathlib import Path
 import logging
 
@@ -170,24 +171,14 @@ def get_files(path: str, yt_name: str, options: dict) -> dict:
             if file_type == "caption":
                 for caption_type in options["captions"]:    # We can download multiple caption types
                     filename = helper.calculate_filename(file_type, f'{yt_name}_{caption_type}')    # Add f'_{caption_type}'
-                    filepath = str(Path(path)/filename)     # Append the path to the filename
+                    filepath = str(Path(path)/filename)        # TODO THIS IS OVERKILL I WILL SIMPLIFY LATER
                     files[filepath] = {"type": file_type, "caption_type": caption_type}  # Add to files               
             else:
                 filename = helper.calculate_filename(file_type, yt_name)    # Calculate the filename
-                filepath = str(Path(path)/filename)                              # Append the path to the filename
+                filepath = str(Path(path)/filename)                              # TODO THIS IS OVERKILL I WILL SIMPLIFY LATER
                 files[filepath] = {"type": file_type}                            # Add to files
 
     return files
-
-# def unpack_files(files: dict) -> dict:
-#     '''
-#     Takes a dictionary in the form of {"video": [], "audio", [], "caption": [], "thumbnail": []}
-#     And converts to {filename:{"parent": parent, "type": type, "caption_type", "downloaded": False, "size": size}, filename:{"parent": parent, "type": type, "caption_type", "downloaded": False, "size": size}}
-#     '''
-#     for file_type in files:
-        
-#     return f
-
 
 def is_available(yt: YouTube) -> bool:
     '''
@@ -233,6 +224,8 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
     if yt_string in ["channel", "playlist"]:    # Do the same stuff for channels and playlists
         path = helper.calculate_path(yt_string, keys["name"], "")
         keys["path"] = helper.resolve_collision(path, paths, yt_id)
+        name = keys["name"] # TODO TEMP
+        print(f"{yt_string} {name} = {path}")
         return keys
 
     elif yt_string == "single":
@@ -248,10 +241,13 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
             temp = helper.calculate_path(yt_string, "", keys["name"])
             keys["path"] = helper.resolve_collision(temp, paths, yt_id)
         else:   # Take the path and add the name
-            temp = str(Path(keys["path"])/keys["name"])
+            name = safe_filename(keys["name"]).replace(' ', '_')
+            temp = str(Path(keys["path"])/Path(name))
             keys["path"] = helper.resolve_collision(temp, paths, yt_id)
             
         path = keys["path"]
+        # name = keys["name"] # TODO TEMP
+        # print(f"{yt_string} {name} = {path}")
         keys["files"] = get_files(path, keys["name"], options)  # Get the files for this video
         return keys
     else: 
