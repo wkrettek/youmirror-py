@@ -133,15 +133,10 @@ class YouMirror:
         # configurer.add_yt(yt_string, id, self.config, specs)       # Add the url to the config # TODO TODO TODO
         to_add.append(yt)                                            # Mark it for adding
 
-        # Open the database tables
-        channels_table = databaser.get_table(db_path, "channels")   # I don't think we need to open this until committing
-        playlists_table = databaser.get_table(db_path, "playlists") # I don't think we need to open this until committing
-        singles_table = databaser.get_table(db_path, "singles")     # I don't think we need to open this until committing
+
         paths_table = databaser.get_table(db_path, "paths")         # Need this to resolve collisions
         files_table = databaser.get_table(db_path, "files")         # Need this to resolve collisions
         singles = dict()
-
-        string_to_table = {"channel": channels_table, "playlist": playlists_table, "single": singles_table, "path": paths_table, "file": files_table}  # Translation dict for pytube type to db table
 
         # Add the items to the database
         to_download: list[YouTube] = []     # List of items to download
@@ -150,8 +145,6 @@ class YouMirror:
         for item in to_add:                 # Search through all the pytube objects we want to add
             keys = parser.get_keys(item, dict(), active_options, paths_table)    # Get all the keys to add to the table
             print(f'Adding \'{keys["name"]}\'')
-            table = string_to_table[yt_string]  # Get the appropriate table for the object
-            table[id] = keys                    # Add the item to the database
             logging.info(f"Adding {url} to the database")
 
             if "files" in keys:             # This means we passed a single
@@ -185,40 +178,43 @@ class YouMirror:
                             info = {"type": file_type, "downloaded": False, "parent": child_id, "caption_type": "", "size": ""}
                             files[filename] = info
 
-        # Check if downloading is skipped
-        if kwargs.get("no_dl", False):
-            print("Skipping download")
-            # Commit to database
-            configurer.save_config(config_path, self.config)    # Save the config
-            return
-
         # Calculate download size
         download_size: int = 0
         for item in to_download:
-            id = parser.get_id(item)    # Get the id
-            filez = files[id]           # This will return a dict
-            for file in filez:
-                file_type = file
-                filezz = file.keys()
-            download_size += downloader.calculate_filesize(item,  active_options)
+            id = parser.get_id(item)                        # Get the id
+            f =  parser.unpack_files(singles[id]["files"])   # Get the list of files
+            download_size += downloader.calculate_filesize(item, file_type, active_options)
 
         # Show download size & ask for confirmation
-        if not kwargs.get("force", False):
+        if (not kwargs.get("force", False)) or kwargs.get("no_dl", False):
             download_size = printer.human_readable(download_size)   # Convert to human readable
             print(f'Downloading will add {download_size} bytes to the mirror')
             if input("Continue? (y/n) ") != "y":                    # Get confirmation
                 print("Aborting")
                 return
 
-
-        # Commit to database
+        # Open the database tables
         print("Saving...")
-        files_table.update(files)   # Record the files in the database
-        paths_table.update(paths)   # Record the paths in the database
+        if yt_string in ['channel', 'playlist']:            # If it's a channel or playlist
+            table = databaser.get_table(db_path, yt_string) # Get the appropriate database for the toplevel item
+            table[id] = keys                                # Add it to the database
+        else:
+            singles[id] = keys  # Else, add it to the singles pile
+        singles_table = databaser.get_table(db_path, "single")  # Add all the children
+        # Commit to database
+        files_table.update(files)       # Record the files in the database
+        paths_table.update(paths)       # Record the paths in the database
         singles_table.update(singles)   # Record all the singles
 
         # Update config file
         configurer.save_config(config_path, self.config)
+
+        # Check if downloading is skipped
+        if kwargs.get("no_dl", False):
+            print("Skipping download")
+            return
+
+        print("Downloading")
 
         # Download all the files                                 
         # for item in to_download:            # Search through all the pytube objects we want to download
@@ -268,20 +264,7 @@ class YouMirror:
             logging.info(f"Could not find {url} not found in the mirror")
             return
 
-        # Open the database tables
-        channels_table = databaser.get_table(db_path, "channels")
-        playlists_table = databaser.get_table(db_path, "playlists")
-        singles_table = databaser.get_table(db_path, "singles")
-        filetree_table = databaser.get_table(db_path, "filetree")
-
-        string_to_table = {"channel": channels_table, "playlist": playlists_table, "single": singles_table}  # Translation dict for pytube type to db table
-        # Find the id in the database
-        table = string_to_table[yt_string]  # Get the appropriate table for the object
-
         to_remove = list[str]()             # List of filepaths to delete
-        if id in table:
-            if "children" in table[id]:
-                pass
 
 
         # If it has children, collect those too

@@ -179,6 +179,16 @@ def get_files(path: str, yt_name: str, options: dict) -> dict:
 
     return files
 
+def unpack_files(files: dict) -> dict:
+    '''
+    Takes a dictionary in the form of {"video": [], "audio", [], "caption": [], "thumbnail": []}
+    And converts to {filename:{"parent": parent, "type": type, "caption_type", "downloaded": False, "size": size}, filename:{"parent": parent, "type": type, "caption_type", "downloaded": False, "size": size}}
+    '''
+    for file_type in files:
+        
+    return f
+
+
 def is_available(yt: YouTube) -> bool:
     '''
     Returns whether a given pytube object is available
