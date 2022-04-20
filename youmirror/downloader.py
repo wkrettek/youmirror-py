@@ -9,6 +9,7 @@ I could maybe make other types of downloads available. I think a possible one is
 
 '''
 from pytube import YouTube, StreamQuery, Stream, Caption, request
+from pytube.request import seq_filesize
 import logging
 from pathlib import Path
 import subprocess
@@ -66,38 +67,46 @@ def combine_video_audio(video_file: str, audio_file: str) -> str:
     Path(temp).unlink()           # Delete the temp video file
     return video_file
 
-def calculate_video_filesize():
+def calculate_video_filesize(yt: YouTube, options: dict) -> int:
     '''
     Calculates the size of a video file
     '''
-    pass
+    video_stream = get_video_stream(yt, options)    # Get the video stream
+    filesize = video_stream.filesize                # Add the filesize
+    if not video_stream.includes_audio_track:       # If there is no audio
+        filesize += calculate_audio_filesize(yt, options)   # Add the audio filesize
+    return filesize
+    
 
-def calculate_audio_filesize():
+def calculate_audio_filesize(yt: YouTube, options: dict) -> int:
     '''
     Calculates the size of an audio file
     '''
-    pass
+    return get_audio_stream(yt, options).filesize
 
-def calculate_caption_filesize():
+
+def calculate_caption_filesize(yt: YouTube, options: dict) -> int:
     '''
     Calculates the size of a caption file
     '''
+    return 0    # Just assume 0 until we get a good option
 
-def calculate_thumbnail_filesize():
+def calculate_thumbnail_filesize(yt: YouTube, options: dict):
     '''
     Calculates the size of a thumbnail file
     '''
+    url = yt.thumbnail_url          # Get the thumbnail url
+    filesize = seq_filesize(url)    # Use pytube's request module to get the filesize
+    return filesize
 
 
 def calculate_filesize(yt: YouTube, file_type: str, options: dict) -> int:
     '''
     Gets the size of the file type 
     '''
-    video_stream = get_video_stream(yt, options)        # Get the video stream
-    filesize = video_stream.filesize                    # Determine the video filesize
-    if not video_stream.includes_audio_track:           # If it doesn't include an audio track
-        audio_stream = get_audio_stream(yt, options)    # Get the audio stream
-        filesize += audio_stream.filesize               # Add the audio_stream filesize
+    file_type_to_func = {"video": calculate_video_filesize, "audio": calculate_audio_filesize, "caption": calculate_caption_filesize, "thumbnail": calculate_thumbnail_filesize}
+    func = file_type_to_func[file_type]
+    filesize = func(yt, options)
     return filesize
 
 def download_stream(stream: Stream, path: str, filename: str, options: dict) -> bool:

@@ -143,14 +143,15 @@ class YouMirror:
         files = {}                          # Local dict of files before we commit to db
         for item in to_add:                 # Search through all the pytube objects we want to add
             keys = parser.get_keys(item, dict(), active_options, paths_table)    # Get all the keys to add to the table
-            print(f'Adding \'{keys["name"]}\'')
+            print(f'Adding {yt_string} \'{keys["name"]}\'')
             logging.debug(f"Adding {keys} to the database")
 
             if "files" in keys:             # This means we passed a single
                 to_download.append(item)    # Mark it for downloading
-                files_to_add = deepcopy(keys["files"])
+                singles[id] = keys      # Add the single to be added later  
+                files_to_add = deepcopy(keys["files"])  # Copy the files dict
                 for filepath in files_to_add:  # Add some extra info we only want in the files db
-                    file = files_to_add["files"] 
+                    file = files_to_add[filepath] 
                     file["parent"] = id
                     file["downloaded"] = False
                     files[filepath] = file # Add the files to the local dict
@@ -173,30 +174,30 @@ class YouMirror:
                     logging.debug(f"Adding {child_keys} to the database")
                     singles[child_id] = child_keys      # Add the single to be added later
                     logging.info(f"Adding {child} to the database")
-                    files_to_add = deepcopy(child_keys["files"])
+                    files_to_add = deepcopy(child_keys["files"])    # Copy the files dict
                     for filepath in files_to_add:    # Add some extra info we only want in the files db
                         file = files_to_add[filepath]
                         file["parent"] = child_id
                         file["downloaded"] = False
-                        files[filepath] = file   # Add the files to the local dict
-                    
-        print("This is what files looks like", files)            
+                        files[filepath] = file   # Add the files to the local dict          
 
         # Calculate download size
         download_size: int = 0
         for item in to_download:
             single =  singles[parser.get_id(item)]  # Get the keys for the single
-            for file in single["files"]:            # Get the files
-                file_type = file["type"]            # Get the file type "video", "audio", "caption"
+            for filename in single["files"]:        # Get the filenames
+                file_type = files[filename]["type"] # Get the file type "video", "audio", "caption"
+                print(f"Adding {file_type} file {filename} to the download size")
                 filesize = downloader.calculate_filesize(item, file_type, active_options)   # Get the filesize
-                files[file]["filesize"] = filesize  # Record the filesize in the db
+                files[filename]["filesize"] = filesize  # Record the filesize in the db
                 download_size += filesize           # Add the filesize to the total download size
             
+        # Show download size
+        download_size = printer.human_readable(download_size)   # Convert to human readable
+        print(f'Downloading will add {download_size} bytes to the mirror')
 
-        # Show download size & ask for confirmation
+        # Ask for confirmation
         if (not kwargs.get("force", False)) or kwargs.get("no_dl", False):
-            download_size = printer.human_readable(download_size)   # Convert to human readable
-            print(f'Downloading will add {download_size} bytes to the mirror')
             if input("Continue? (y/n) ") != "y":                    # Get confirmation
                 print("Aborting")
                 return
@@ -209,11 +210,14 @@ class YouMirror:
         else:
             singles[id] = keys  # Else, add it to the singles pile
         singles_table = databaser.get_table(db_path, "single")  # Where yt videos go
-        files_table = databaser.get_table(db_path, "single")  # Where files go
+        files_table = databaser.get_table(db_path, "files")  # Where files go
         # Commit to database
         files_table.update(files)       # Record the files in the database
         paths_table.update(paths)       # Record the paths in the database
         singles_table.update(singles)   # Record all the singles
+        files_table.commit()
+        paths_table.commit()
+        singles_table.commit()
 
         # Update config file
         configurer.save_config(config_path, self.config)
@@ -223,7 +227,7 @@ class YouMirror:
             print("Skipping download")
             return
 
-        print("Downloading")
+        print("Downloading...")
 
         # Download all the files                                 
         # for item in to_download:            # Search through all the pytube objects we want to download
