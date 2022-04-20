@@ -9,7 +9,7 @@ I could maybe make other types of downloads available. I think a possible one is
 
 '''
 from pytube import YouTube, StreamQuery, Stream, Caption, request
-from pytube.request import seq_filesize
+import pytube.request as request
 import logging
 from pathlib import Path
 import subprocess
@@ -36,7 +36,7 @@ def get_video_stream(yt: YouTube, options: dict) -> Stream:
     '''
     Gets the video stream from the video
     '''
-    if "resolution" in options:             # If resolution is specified
+    if options["has_ffmpeg"]:             # If resolution is specified
         resolution = options["resolution"]  # Get the resolution from the options
     else:
         return yt.streams.filter(progressive=True, subtype="mp4").order_by("resolution").last()  # Else, get the highest res progressive stream (usually 720p)
@@ -62,7 +62,7 @@ def combine_video_audio(video_file: str, audio_file: str) -> str:
     temp.touch()                        # Create the file   
     Path(video_file).rename(temp)       # Rename the video file to the temp file
     temp = str(temp)                    # Convert to string
-    subprocess.run(["ffmpeg", "-y", "-i", f"{temp}", "-i", f"{audio_file}", "-c:v", "copy", "-c:a", "copy", f"{video_file}"])               # Use ffmpeg to combine the video and audio
+    subprocess.run(["ffmpeg", "-y", "-i", f"{temp}", "-i", f"{audio_file}", "-c:v", "copy", "-c:a", "copy", f"{video_file}"], capture_output=True)               # Use ffmpeg to combine the video and audio
     Path(audio_file).unlink()     # Delete the temp audio file
     Path(temp).unlink()           # Delete the temp video file
     return video_file
@@ -96,7 +96,7 @@ def calculate_thumbnail_filesize(yt: YouTube, options: dict):
     Calculates the size of a thumbnail file
     '''
     url = yt.thumbnail_url          # Get the thumbnail url
-    filesize = seq_filesize(url)    # Use pytube's request module to get the filesize
+    filesize = request.seq_filesize(url)    # Use pytube's request module to get the filesize
     return filesize
 
 
@@ -116,7 +116,7 @@ def download_stream(stream: Stream, path: str, filename: str, options: dict) -> 
     stream.download(output_path=path, filename=filename) # Download to the appropriate path and name
     return True
 
-def download_video(yt: YouTube, path: str, filename: str, options: dict) -> None:
+def download_video(yt: YouTube, path: str, filename: str, options: dict) -> str:
     '''
     Gets the proper stream for video and downloads it
     '''
@@ -125,9 +125,11 @@ def download_video(yt: YouTube, path: str, filename: str, options: dict) -> None
         video_stream = get_video_stream(yt, options)                # Get the video stream
         download_stream(video_stream, path, filename, options)      # Download the video stream
         if not video_stream.includes_audio_track:                   # If no audio track
-            audio_stream = get_audio_stream(yt, options)            # Get the audio streamm
+            filepath = str(Path(path)/Path(filename))             # Get the filepath
+            audio_stream = get_audio_stream(yt, options)            # Get the audio stream
             download_stream(audio_stream, path, "temp_audio.mp4", options)  # Download the audio stream
-            combine_video_audio(f"{path}{filename}", f"{path}temp_audio.mp4") # Combine the video and audio
+            audio_filepath = str(Path(path)/Path("temp_audio.mp4")) # Get the audio filepath
+            combine_video_audio(filepath, audio_filepath) # Combine the video and audio
     except Exception as e:
         logging.exception(f'Could not download video at {str(path) + filename}')
 
@@ -138,14 +140,13 @@ def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> st
     Probably should just implement it in this library until pytube is updated
     '''
     # TODO handle for different languages
-    captions_types = ["a.en, en"]
-    captions = yt.caption_tracks
-    for c_type in captions_types:
-        if c_type in filename:
-            if c_type in captions:
-                caption = captions[c_type]
-                caption.download(output_path=path, title=filename) # Adding the index to the filename for now
-                return filename
+    caption_type = options["caption_type"]  # Language was injected from above
+    captions = yt.captions            # Get the captions
+    for caption in captions:         # Iterate through the captions
+        if caption.code == caption_type:    # If the caption is the language we want
+            caption.download(output_path=path, title=filename) # Download the caption
+            return filename
+    print("Could not find caption for language: " + caption_type)
     return None
 
 def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
@@ -157,13 +158,16 @@ def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
     '''
     try:
         length = yt.length                                  # Get the length of the video
-        stream = get_stream(yt, "audio", options)           # Get the audio stream
-        download_stream(stream, path, filename, options)    # Download the audio stream
+        stream = get_audio_stream(yt, options)           # Get the audio stream
+        stream.download(output_path=path, filename=filename)    # Download the audio stream
         if options["has_ffmpeg"]:                           # TODO If they have ffmpeg, trim the audio
             pass
             # subprocess.run(["ffmpeg", "-y", "-i", f"{path}{filename}", "-ss", "00:00:00", "-t", f"{length}", f"{path}{filename}"])
+        return filename
     except Exception as e:
         logging.exception(f'Could not download video {filename}')
+        return None
+    return None
 
 
 def download_thumbnail(yt: YouTube, path: str, filename: str, options: dict) -> str:
@@ -171,16 +175,16 @@ def download_thumbnail(yt: YouTube, path: str, filename: str, options: dict) -> 
     Gets the thumbnail from the video and downloads it
     '''
     try:
-        url = yt.thumbnail_url  # For now, pytube can only get the url for a thumbnail
-        path = Path(path)       # Wrap the path
-        path.mkdir(parents=True, exist_ok=True)    # Make the directory if it doesn't exist
-        filepath = path/Path(filename)            # Add the path and filename
-        filename: Path = filepath.with_suffix(".jpg")   # Add the extension for the thumbnail
-        filename.touch()                                # Create the file if it doesn't already exist
-        urlretrieve(url, filename=filename)             # Download to filename
+        path = Path(path)                       # Wrap the path
+        path.mkdir(parents=True, exist_ok=True) # Create the directory if it doesn't exist
+        filepath = path/Path(filename)  # Build the filepath
+        filepath.touch()                # Create the file
+        url = yt.thumbnail_url          # For now, pytube can only get the url for a thumbnail
+        urlretrieve(url, filepath)      # Download the thumbnail
+        return filename
     except Exception as e:
-        logging.exception(f'Could not download thumbnail at {filename}')
-    # TODO implement a way to download the url, probably copy however pytube manages to do it without dependencies
+        logging.exception(f'Could not download thumbnail at {filepath}')
+        return None
 
 def download_single(yt: YouTube, file_type: str, filepath: str, options: dict) -> None:
     '''
@@ -193,11 +197,9 @@ def download_single(yt: YouTube, file_type: str, filepath: str, options: dict) -
         "caption": download_caption, 
         "thumbnail": download_thumbnail}
 
-    filepath = Path(filepath)       # Convert to Path
-    path = filepath.parent          # Get the path
-    filename = filepath.stem        # Get the filename
-
     print(f"Downloading {filepath}")
 
-    func = file_type_to_do[file_type]               # Figure out what to do
-    func(yt, path, filename, options)               # Call the function
+    path = str(Path(filepath).parent)    # Extract the path
+    filename = str(Path(filepath).name)  # Extract the filename
+    func = file_type_to_do[file_type]    # Figure out what to do
+    return func(yt, path, filename, options)    # Call the function

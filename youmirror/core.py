@@ -146,6 +146,7 @@ class YouMirror:
             print(f'Adding {yt_string} \'{keys["name"]}\'')
             logging.debug(f"Adding {keys} to the database")
 
+            paths[keys["path"]] = {}        # Add the path to the paths dict
             if "files" in keys:             # This means we passed a single
                 to_download.append(item)    # Mark it for downloading
                 singles[id] = keys      # Add the single to be added later  
@@ -170,6 +171,7 @@ class YouMirror:
                     child_id = parser.get_id(child)     # Get the id for the single
 
                     child_keys = parser.get_keys(child, child_keys, active_options, paths_table) # Get the rest of the keys from the pytube object
+                    paths[keys["path"]] = {}        # Add the path to the paths dict
                     print(f'Adding \'{child_keys["name"]}\'')
                     logging.debug(f"Adding {child_keys} to the database")
                     singles[child_id] = child_keys      # Add the single to be added later
@@ -187,7 +189,7 @@ class YouMirror:
             single =  singles[parser.get_id(item)]  # Get the keys for the single
             for filename in single["files"]:        # Get the filenames
                 file_type = files[filename]["type"] # Get the file type "video", "audio", "caption"
-                print(f"Adding {file_type} file {filename} to the download size")
+                print(f"Calculating filesize for {file_type} {filename}")
                 filesize = downloader.calculate_filesize(item, file_type, active_options)   # Get the filesize
                 files[filename]["filesize"] = filesize  # Record the filesize in the db
                 download_size += filesize           # Add the filesize to the total download size
@@ -202,11 +204,16 @@ class YouMirror:
                 print("Aborting")
                 return
 
-        # Open the database tables
         print("Saving...")
+
+        # Update config file
+        configurer.save_config(config_path, self.config)
+
+        # Open the database tables
         if yt_string in ['channel', 'playlist']:            # If it's a channel or playlist
             table = databaser.get_table(db_path, yt_string) # Get the appropriate database for the toplevel item
             table[id] = keys                                # Add it to the database
+            table.commit()                                  # Commit the changes to the database
         else:
             singles[id] = keys  # Else, add it to the singles pile
         singles_table = databaser.get_table(db_path, "single")  # Where yt videos go
@@ -215,12 +222,9 @@ class YouMirror:
         files_table.update(files)       # Record the files in the database
         paths_table.update(paths)       # Record the paths in the database
         singles_table.update(singles)   # Record all the singles
-        files_table.commit()
-        paths_table.commit()
-        singles_table.commit()
-
-        # Update config file
-        configurer.save_config(config_path, self.config)
+        files_table.commit()            # Commit the changes to the database
+        paths_table.commit()            # Commit the changes to the database
+        singles_table.commit()          # Commit the changes to the database
 
         # Check if downloading is skipped
         if kwargs.get("no_dl", False):
@@ -230,13 +234,18 @@ class YouMirror:
         print("Downloading...")
 
         # Download all the files                                 
-        # for item in to_download:            # Search through all the pytube objects we want to download
-        #     id = parser.get_id(item)        # Get the id
-        #     files = singles_table[id]["files"]  # Get the files from the database
-        #     for file in files:                  # Search through all the files
-        #         if not Path(file).exists():     # If the file doesn't exist
-        #             file = str(path/Path(file)) # Inject the root that was passed from the add() function call
-        #             downloader.download_single(item, file, active_options) # Download it
+        for item in to_download:            # Search through all the pytube objects we want to download
+            id = parser.get_id(item)        # Get the id
+            files = singles_table[id]["files"]  # Get the files from the database
+            for f in files:                  # Search through all the files
+                data = files_table[f]              # Get the data for this file
+                file_type = data["type"]           # Get the file type 
+                if file_type == "caption":          # If it's a caption, use options to set the caption language
+                    active_options["caption_type"] = data["caption_type"] # Set the caption type
+                if not Path(file).exists():     # If the file doesn't exist
+                    filepath = str(path/Path(file)) # Inject the root that was passed from the add() function call
+                    if downloader.download_single(item, filepath, active_options): # Download it
+                        files_table[f]["downloaded"] = True # If successful mark it as downloaded
 
     def remove(
         self,
