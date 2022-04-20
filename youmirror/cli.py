@@ -14,19 +14,20 @@ def main():
 def sync(
     url : str,
     root : str = typer.Argument(None, help="The root directory to sync to, default=\'./\'"),
-    dry_run : Optional[bool] = typer.Option(default=False, show_choices=False, help="Calculates changes with no execution"),
-    no_update :Optional[bool] = typer.Option(default=False, show_choices=False, help="Syncs the mirror without updating"),
+    # dry_run : Optional[bool] = typer.Option(default=False, show_choices=False, help="Calculates changes with no execution"),
+    # no_update :Optional[bool] = typer.Option(default=False, show_choices=False, help="Syncs the mirror without updating"),
     ):
     '''
     Checks for new videos and downloads them
     '''
-    print(f'Dry run is {dry_run}')
+    ym = YouMirror()
+    ym.sync()
     return
 
 @app.command()
 def new(root : str = typer.Argument(None)):
     '''
-    Create a new config file from the template
+    Create a new mirror in the given directory [default:'./']
     '''
     ym = YouMirror()
     ym.new(root)
@@ -57,12 +58,14 @@ def add(
 def remove(
     url : str,
     root : Optional[str] = typer.Argument(None, help='Root directory to remove from'),
+    no_rm : Optional[bool] = typer.Option(False, "--no-rm", help="Stop tracking without deleting any files")
     ):
     '''
     Removes the url from the mirror and deletes all files
-    '''
+    '''    
+    kwargs = {"no_rm": no_rm}
     ym = YouMirror()
-    ym.remove(url, root)
+    ym.remove(url, root, **kwargs)
 
 # @app.command()
 # def check():

@@ -21,7 +21,7 @@ from the videos and waiting for youtube to respond. There might be other async
 optimizations I'm not seeing too
 '''
 
-# logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 
 class YouMirror:
     '''
@@ -66,6 +66,7 @@ class YouMirror:
         Adds the url to the mirror and downloads the video(s)
         '''
 
+        # Initialize root
         if not root: root = self.root
         path = Path(root)
 
@@ -125,7 +126,7 @@ class YouMirror:
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
         specs = {"name": name, "url": url, "last_updated": last_updated}
-        if "resolution" in kwargs: specs.update({})   # Add resolution to configs if specified
+        if "resolution" in kwargs: specs.update({})   # Add resolution to configs if specified # TODO actually add it
 
         # Add the id to the config
         to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add
@@ -142,15 +143,16 @@ class YouMirror:
         singles = dict()                                    # Create a dict of singles
 
         # Add the items to the database
-        to_download: list[YouTube] = []     # List of items to download
-        paths = {}                          # Local dict of paths before we commit to db
-        files = {}                          # Local dict of files before we commit to db
-        for item in to_add:                 # Search through all the pytube objects we want to add
+        to_download: list[YouTube] = []         # List of items to download
+        paths_to_add = dict()                   # Local dict of paths before we commit to db
+        singles_to_add = dict()                 # Local dict of singles to add before committing to db
+        files_to_add = dict()                   # Local dict of files before we commit to db
+        for item in to_add:                     # Search through all the pytube objects we want to add
             keys = parser.get_keys(item, dict(), active_options, paths_table)    # Get all the keys to add to the table
             print(f'Adding {yt_string} \'{keys["name"]}\'')
             logging.debug(f"Adding {keys} to the database")
 
-            paths[keys["path"]] = {}        # Add the path to the paths dict
+            paths_to_add.update({keys["path"]: {"parent": id}})        # Add the path to the paths dict
             if "files" in keys:             # This means we passed a single
                 to_download.append(item)    # Mark it for downloading
                 singles[id] = keys      # Add the single to be added later  
@@ -163,18 +165,17 @@ class YouMirror:
 
             # Handle children
             if "children" in keys:                              # If any children appeared when we got keys
+                inject_keys = {"parent_id": id, "parent_name": 
+                keys["name"], "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
                 print(f'Found {len(keys["children"])} Youtube videos')
 
                 for child in parser.get_children(item):   # We have to get the children again to get urls instead of ids :/
-
-                    child_keys = {"parent_id": id, "parent_name": 
-                    keys["name"], "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
 
                     child = parser.get_pytube(child)    # Wrap those children in pytube objects
                     to_download.append(child)           # Mark this YouTube object for downloading
                     child_id = parser.get_id(child)     # Get the id for the single
 
-                    child_keys = parser.get_keys(child, child_keys, active_options, paths_table) # Get the rest of the keys from the pytube object
+                    child_keys = parser.get_keys(child, inject_keys, active_options, paths_table) # Get the rest of the keys from the pytube object
                     paths[keys["path"]] = {}        # Add the path to the paths dict
                     print(f'Adding \'{child_keys["name"]}\'')
                     logging.debug(f"Adding {child_keys} to the database")
@@ -189,21 +190,22 @@ class YouMirror:
 
         # Calculate download size
         download_size: int = 0
-        for item in to_download:
-            single =  singles[parser.get_id(item)]  # Get the keys for the single
-            for filename in single["files"]:        # Get the filenames
-                file_type = files[filename]["type"] # Get the file type "video", "audio", "caption"
-                print(f"Calculating filesize for {file_type} {str(Path(filename).name)}")
-                filesize = downloader.calculate_filesize(item, file_type, active_options)   # Get the filesize
-                files[filename]["filesize"] = filesize  # Record the filesize in the db
-                download_size += filesize           # Add the filesize to the total download size
+        if not kwargs.get("no_dl", False):
+            for item in to_download:
+                single =  singles[parser.get_id(item)]  # Get the keys for the single
+                for filename in single["files"]:        # Get the filenames
+                    file_type = files[filename]["type"] # Get the file type "video", "audio", "caption"
+                    print(f"Calculating filesize for {file_type} {str(Path(filename).name)}")
+                    filesize = downloader.calculate_filesize(item, file_type, active_options)   # Get the filesize
+                    files[filename]["filesize"] = filesize  # Record the filesize in the db
+                    download_size += filesize           # Add the filesize to the total download size
             
-        # Show download size
-        download_size = printer.human_readable(download_size)   # Convert to human readable
-        print(f'Downloading will add {download_size} bytes to the mirror')
+            # Show download size
+            download_size = printer.human_readable(download_size)   # Convert to human readable
+            print(f'Downloading will add {download_size} bytes to the mirror')
 
         # Ask for confirmation
-        if (not kwargs.get("force", False)) or kwargs.get("no_dl", False):
+        if not kwargs.get("force", False) or not kwargs.get("no_dl", False):
             if input("Continue? (y/n) ") != "y":                    # Get confirmation
                 print("Aborting")
                 return
@@ -251,12 +253,7 @@ class YouMirror:
                     if downloader.download_single(item, file_type, filepath, active_options): # Download it
                         files_table[f]["downloaded"] = True # If successful mark it as downloaded
 
-    def remove(
-        self,
-        url: str,
-        root: str = None,
-        **kwargs
-        ) -> None:
+    def remove(self, url: str, root: str = None, **kwargs) -> None:
         """
         Removes the following url from the mirror and deletes the video(s)
         """
@@ -296,61 +293,87 @@ class YouMirror:
             logging.info(f"Could not find {url} not found in the mirror")
             return
 
+        print("Getting db info for url")
         yt_string = parser.link_type(url)   # Get the type of youtube object "channel", "playlist", "single"
         table = databaser.get_table(db_path, yt_string, autocommit=False)  # Get the appropriate database
         keys = table[id]                    # Get the keys for the object
-        path = Path(root)/Path(keys["path"])                 # Get the path for the object
-        path_size = 0
-        files_to_remove = set()
-        for root, dirs, files in os.walk(path, topdown=False):  # Find all the files in the directory
-            for name in files:                                  # Search through all the files
-                filepath = os.path.join(root, name)             # Get the filepath
-                print(filepath) 
-                filepath = Path(filepath)
-        print(f"Removing will delete {printer.human_readable(path_size)} from the mirror")
+
+        if not kwargs.get("no_rm", False):
+            print("Calculating removal size")
+            path = Path(root)/Path(keys["path"])                 # Get the path for the object
+            path_size = 0
+            files_to_remove = set()
+            for root, dirs, files in os.walk(path, topdown=False):  # Find all the files in the directory
+                for name in files:                                  # Search through all the files
+                    filepath = os.path.join(root, name)             # Get the filepath
+                    print(filepath) 
+                    filepath = Path(filepath)
+            print(f"Removing will delete {printer.human_readable(path_size)} from the mirror")
 
         # Ask for confirmation
-        if (not kwargs.get("force", False)) or kwargs.get("no_rm", False):
+        if (not kwargs.get("force", False)) or not kwargs.get("no_rm", False):
             if input("Continue? (y/n) ") != "y":                    # Get confirmation
                 print("Aborting")
                 return
 
-        print("Deleting files...")
-        shutil.rmtree(path, ignore_errors=True)                                       # Remove the directory
+        if not kwargs.get("no_rm" ,False):
+            print("Deleting files...")
+            shutil.rmtree(path, ignore_errors=True)                                       # Remove the directory
 
-        print("Cleaning database...")
-        # Open databases
-        singles_to_remove = set()   # Collect the singles
+        print("Getting paths to remove...")
+        paths_to_remove = set()
+        path = keys["path"]
+        paths_to_remove.add(path)
+        print("Paths to remove", paths_to_remove)
+
+        print("Getting singles to remove")
+        singles_to_remove = set()
+        if yt_string == "single":
+            singles_to_remove.add(id)
+        else:
+            singles_to_remove.update(keys["children"])
+        print("Singles to remove", singles_to_remove)
+
+        print("Getting files to remove")
+        files_to_remove = set()
         if not (singles_table := databaser.get_table(db_path, "single")):   # Get the singles table if not already initialized
             singles_table = table
-        files_table = databaser.get_table(db_path, "files") # Get the files table
-        paths_table = databaser.get_table(db_path, "paths") # Get the paths table
-        if "children" in table[id]:                         # If it has children
-            children = table[id]["children"]                # Get the children
-            for child in children:                          # Search through all the children
-                singles_to_remove.add(child)                # Mark each child to be removed
-        elif yt_string == "single":                         # If it's a single
-            singles_to_remove.add(id)                       # Mark it to be removed
-        
-        for singles in singles_to_remove:
-            files = singles_table[singles]["files"]
-            for file in files:
-                files_to_remove.add(file)
-
-        print("files to remove", files_to_remove)
-        
-
-        print("Saving changes...")
-        # Commit the changes to the database
-        del paths_table[keys["path"]]                             # Remove the path from the database
-        for file in files_to_remove:
-            del files_table[file]                                 # Delete the files from the database
         for single in singles_to_remove:
-            del singles_table[single]                             # Delete the singles from the database
-        del table[id]                                             # Delete the object from the database
-        files_table.commit()                                    # Commit the changes to the database          
-        singles_table.commit()
-        table.commit()
+            print("Files = ", singles_table[single]["files"])
+
+        # print("Cleaning database...")
+        # # Open databases
+        # singles_to_remove = set()   # Collect the singles
+        # if not (singles_table := databaser.get_table(db_path, "single")):   # Get the singles table if not already initialized
+        #     singles_table = table
+        #     singles_to_remove.add(id)                       # Mark it to be removed
+        # files_table = databaser.get_table(db_path, "files") # Get the files table
+        # paths_table = databaser.get_table(db_path, "paths") # Get the paths table
+        # if "children" in table[id]:                         # If it has children
+        #     children = table[id]["children"]                # Get the children
+        #     for child in children:                          # Search through all the children
+        #         singles_to_remove.add(child)                # Mark each child to be removed
+
+        # # Collect the filepaths from the singles
+        # for single in singles_to_remove:
+        #     files = singles_table[single]["files"]
+        #     for file in files:
+        #         files_to_remove.add(file)
+
+        # print("files to remove", files_to_remove)
+        
+
+        # print("Saving changes...")
+        # # Commit the changes to the database
+        # del paths_table[keys["path"]]                             # Remove the path from the database
+        # for file in files_to_remove:
+        #     del files_table[file]                                 # Delete the files from the database
+        # for single in singles_to_remove:
+        #     del singles_table[single]                             # Delete the singles from the database
+        # del table[id]                                             # Delete the object from the database
+        # files_table.commit()                                    # Commit the changes to the database          
+        # singles_table.commit()
+        # table.commit()
 
         # Update config file
         del self.config[yt_string][id]  # TODO doing it directly for now, but we should go through the configurer
