@@ -12,7 +12,7 @@ def main():
 
 @app.command()
 def sync(
-    url : str,
+    url : str = None,
     root : str = typer.Argument(None, help="The root directory to sync to, default=\'./\'"),
     # dry_run : Optional[bool] = typer.Option(default=False, show_choices=False, help="Calculates changes with no execution"),
     # no_update :Optional[bool] = typer.Option(default=False, show_choices=False, help="Syncs the mirror without updating"),

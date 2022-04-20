@@ -21,7 +21,7 @@ from the videos and waiting for youtube to respond. There might be other async
 optimizations I'm not seeing too
 '''
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 class YouMirror:
     '''
@@ -36,6 +36,7 @@ class YouMirror:
         self.db: str = databaser.db_file
         self.config_file: str = configurer.config_file
         self.config = dict()
+        self.cache: dict[id: str: Union[Playlist, Channel, YouTube]] = dict() # TODO This will be used so we don't have to reinitialize pytube objects we've already made, because initializing them is slow
             
     def new(self, root : str) -> None:
         '''
@@ -198,10 +199,10 @@ class YouMirror:
             for item in to_download:
                 single =  singles_to_add[parser.get_id(item)]  # Get the keys for the single
                 for filename in single["files"]:        # Get the filenames
-                    file_type = files[filename]["type"] # Get the file type "video", "audio", "caption"
+                    file_type = files_to_add[filename]["type"] # Get the file type "video", "audio", "caption"
                     print(f"Calculating filesize for {file_type} {str(Path(filename).name)}")
                     filesize = downloader.calculate_filesize(item, file_type, active_options)   # Get the filesize
-                    files[filename]["filesize"] = filesize  # Record the filesize in the db
+                    files_to_add[filename]["filesize"] = filesize  # Record the filesize in the db
                     download_size += filesize           # Add the filesize to the total download size
             
             # Show download size
@@ -256,6 +257,8 @@ class YouMirror:
                     filepath = str(path/Path(f)) # Inject the root that was passed from the add() function call
                     if downloader.download_single(item, file_type, filepath, active_options): # Download it
                         files_table[f]["downloaded"] = True # If successful mark it as downloaded
+
+        print("Done!")
 
     def remove(self, url: str, root: str = None, **kwargs) -> None:
         """
@@ -354,12 +357,11 @@ class YouMirror:
         print("paths to remove", paths_to_remove)
         print("files to remove", files_to_remove)
 
-        print("Cleaning database...")
+        print("Saving changes...")
         # Open databases
         files_table = databaser.get_table(db_path, "files") # Get the files table
         paths_table = databaser.get_table(db_path, "paths") # Get the paths table        
 
-        print("Saving changes...")
         # Commit the changes to the database
         for path in paths_to_remove:        # Remove the paths from the database
             del paths_table[path]
@@ -389,7 +391,7 @@ class YouMirror:
         if not root:
             root = self.root
 
-        self.update(root)
+        # self.update(root)
 
         # Config setup
         path = Path(root)
@@ -410,18 +412,34 @@ class YouMirror:
         playlists = self.config["playlist"] # Get all the playlists
         singles = self.config["single"]     # Get all the singles
 
-        # print(f"{len(to_download)} Videos to download")
-        # # Download videos
-        
-        # if len(to_download) > 0:
-        #     print("Downloading videos...")
-        #     for video in to_download:
-        #         output_path = self.root + 'singles/'    # Set to the single path
-        #         url = video['url']                      # Get the url      
-        #         filepath = downloader.download_video(url=url, output_path=output_path)
-        #         # Add to database
-        #         key = parse.quote_plus(url)             # Make the key good for sqlite    
-        #         singles[key] = {"url": url, "filepath": filepath}   # Add to sqlite
+        files_to_download = dict()
+        files_table = databaser.get_table(db_path, "files", autocommit=True)
+        for filepath in files_table:                            # Search through the files table and find undownloaded files
+            downloaded = files_table[filepath]["downloaded"]    # Record if downloaded
+            if not downloaded:                                  # If not downloaded, mark it for downloading
+                files_to_download[filepath] = files_table[filepath]
+                filename = Path(filepath).name  # Get the filename for pretty printing
+                print(f"marking {filename} for download")
+
+        print(f'Found {len(files_to_download)} files to download')
+
+        # # Download all the files    
+        # if len(files_to_download) > 0:
+        #     print("Downloading videos...")   
+        #     for file in files_to_download:          # Search through all the pytube objects we want to download
+
+                # id = parser.get_id(item)            # Get the id
+                # files = singles_table[id]["files"]  # Get the files from the database
+                # for f in files:                     # Search through all the files
+                #     data = files_table[f]           # Get the data for this file
+                #     file_type = data["type"]        # Get the file type 
+                #     if file_type == "caption":      # If it's a caption, use options to set the caption language
+                #         active_options["caption_type"] = data["caption_type"] # Set the caption type
+                #     if not Path(f).exists():     # If the file doesn't exist
+                #         filepath = str(path/Path(f)) # Inject the root that was passed from the add() function call
+                #         if downloader.download_single(item, file_type, filepath, active_options): # Download it
+                #             files_table[f]["downloaded"] = True # If successful mark it as downloaded
+
 
     def update(
         self,
@@ -447,11 +465,12 @@ class YouMirror:
         self.config = configurer.load_config(config_path)       # Load the config file
 
         channels = configurer.get_options("channel", self.config)   # Load channels
-        playlists = configurer.get_options("channel", self.config)   # Load channels
+        playlists = configurer.get_options("playlist", self.config)   # Load channels
 
-        channels_table = databaser.get_table(db_path, "channels")   # Load channels table
-        playlists_table = databaser.get_table(db_path, "playlists") # Load playlists table
+        channels_table = databaser.get_table(db_path, "channel")   # Load channels table
+        playlists_table = databaser.get_table(db_path, "playlist") # Load playlists table
 
+        # For each item in channels
         for id in channels:
             channel = channels[id]
             print("id ==", id)
@@ -467,7 +486,7 @@ class YouMirror:
 
 
         print("All set!")
-        to_download = set()
+        to_download: set[YouTube] = set()
         return to_download  
 
     def verify(
