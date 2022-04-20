@@ -22,13 +22,11 @@ You can easily interact with youmirror using the command line tool. Create a new
 
 `youmirror new [folder]`
 
-You can add to your mirror by using the add command with a link like by using `add`. If you don't specify the folder, it will search the current directory for a config file
+You can add to your mirror by using the `add` command with a youtube link. Any youtube link. If you don't specify the folder, it will search the current directory for a config file
 
 `youmirror add "https://www.youtube.com/watch?v=Pa_HT9vQiLw&t=4s" [folder]`
 
-
-
-Conversely you can remove from the mirror with
+Conversely you can remove from the mirror with the `remove` command
 
 `youmirror remove "https://www.youtube.com/watch?v=Pa_HT9vQiLw&t=4s" [folder]`
 
@@ -59,7 +57,7 @@ youmirror does all the organization and filetree-building so you don't have to. 
                     | -- files
 ```
             
-You may notice that I use the term 'single' to refer to a single youtube video. This is leaning into the fact that there is a lot of information that can be downloaded from a youtube video, this includes downloading the audio separately, or downloading the captions
+You may notice that I use the term 'single' to refer to a single youtube video. This is leaning into the fact that there is a lot of information that can be downloaded from a youtube video, including downloading the audio separately, or downloading the captions. Also, singles are youtube videos that were added separately from a playlist or a channel
 
 
 ## Downloading
@@ -67,6 +65,7 @@ You may notice that I use the term 'single' to refer to a single youtube video. 
 youmirror offers best-effort downloading. This means youmirror will attempt to download the best quality stream that matches your request. By default, youmirror will download at 720p if available. If 720p is not available, it will download the next best resolution for the video. 
 
 You can specify higher resolutions if you prefer, but Youtube does not serve higher res streams with combined audio, so if a higher resolution is specified, youmirror will find the highest quality audio stream and attempt to combine it with the video using `ffmpeg`. If you don't have `ffmpeg`, you can download it [here].(https://www.ffmpeg.org/download.html) It's not required, so you can download videos at up to 720p without it.
+
 
 ## Configuration
 

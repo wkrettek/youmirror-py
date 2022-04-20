@@ -405,6 +405,11 @@ class YouMirror:
             logging.error(f'Could not find database file in root directory \'{path}\'')
             return
         self.config = configurer.load_config(config_path)       # Load the config file
+        active_options = configurer.defaults                                # Load default options
+        global_options = configurer.get_options("youmirror", self.config)   # Get global options from config
+        active_options.update(global_options)                               # Overwrite with globals
+        # active_options.update(kwargs)                                       # Overwrite with command line options
+        active_options["has_ffmpeg"] = shutil.which("ffmpeg") is not None   # Record whether they have ffmpeg
 
         to_download = list()    # Make a list of videos to download
 
