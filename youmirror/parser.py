@@ -155,8 +155,8 @@ def get_children(yt: Union[Channel, Playlist]) -> list[str]:
 
 def get_files(path: str, yt_name: str, options: dict) -> dict:
     '''
-    Returns a dict of file types and filenames we want to download
-    files = {"video": ["singles/single_name/single_name.mp4"], "audio": [""], "caption": [""], "thumbnail" [""]}
+    Returns a dict of filenames we want to download
+    files = {filepath: {type: file_type, caption_type: caption_type}, filepath: {type: file_type, caption_type: caption_type}}
     '''
     to_download = { # Returns true/false if we want to download the video
         "video": options["dl_video"], 
@@ -164,29 +164,29 @@ def get_files(path: str, yt_name: str, options: dict) -> dict:
         "caption": options["dl_captions"], 
         "thumbnail": options["dl_thumbnail"]
     }
-    files = {"video": [], "audio": [], "caption": [], "thumbnail": []}
+    files = dict()
     for file_type in to_download:
         if to_download[file_type]:   # Check the boolean value matching the file_type
             if file_type == "caption":
                 for caption_type in options["captions"]:    # We can download multiple caption types
                     filename = helper.calculate_filename(file_type, f'{yt_name}_{caption_type}')    # Add f'_{caption_type}'
                     filepath = str(Path(path)/filename)     # Append the path to the filename
-                    files[file_type].append(filepath)       # Add to files               
+                    files[filepath] = {"type": file_type, "caption_type": caption_type}  # Add to files               
             else:
                 filename = helper.calculate_filename(file_type, yt_name)    # Calculate the filename
                 filepath = str(Path(path)/filename)                              # Append the path to the filename
-                files[file_type].append(filepath)
+                files[filepath] = {"type": file_type}                            # Add to files
 
     return files
 
-def unpack_files(files: dict) -> dict:
-    '''
-    Takes a dictionary in the form of {"video": [], "audio", [], "caption": [], "thumbnail": []}
-    And converts to {filename:{"parent": parent, "type": type, "caption_type", "downloaded": False, "size": size}, filename:{"parent": parent, "type": type, "caption_type", "downloaded": False, "size": size}}
-    '''
-    for file_type in files:
+# def unpack_files(files: dict) -> dict:
+#     '''
+#     Takes a dictionary in the form of {"video": [], "audio", [], "caption": [], "thumbnail": []}
+#     And converts to {filename:{"parent": parent, "type": type, "caption_type", "downloaded": False, "size": size}, filename:{"parent": parent, "type": type, "caption_type", "downloaded": False, "size": size}}
+#     '''
+#     for file_type in files:
         
-    return f
+#     return f
 
 
 def is_available(yt: YouTube) -> bool:

@@ -1,4 +1,3 @@
-from turtle import update
 import youmirror.parser as parser
 import youmirror.downloader as downloader
 import youmirror.helper as helper
@@ -10,7 +9,8 @@ from typing import Union    # For typing
 from pytube import YouTube, Channel, Playlist
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
 from datetime import datetime
-import shutil               # For removing whole directories     
+import shutil               # For removing whole directories    
+from copy import deepcopy   # For deep copying dictionaries
 
 '''
 This is the core module
@@ -121,7 +121,7 @@ class YouMirror:
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
         specs = {"name": name, "url": url, "last_updated": last_updated}
-        if "resolution" in kwargs: specs.update(kwargs["resolution"])   # Add resolution to configs if specified
+        if "resolution" in kwargs: specs.update({})   # Add resolution to configs if specified
 
         # Add the id to the config
         to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add
@@ -134,9 +134,8 @@ class YouMirror:
         to_add.append(yt)                                            # Mark it for adding
 
 
-        paths_table = databaser.get_table(db_path, "paths")         # Need this to resolve collisions
-        files_table = databaser.get_table(db_path, "files")         # Need this to resolve collisions
-        singles = dict()
+        paths_table = databaser.get_table(db_path, "paths") # Need this to resolve collisions (only checking paths)
+        singles = dict()                                    # Create a dict of singles
 
         # Add the items to the database
         to_download: list[YouTube] = []     # List of items to download
@@ -145,14 +144,16 @@ class YouMirror:
         for item in to_add:                 # Search through all the pytube objects we want to add
             keys = parser.get_keys(item, dict(), active_options, paths_table)    # Get all the keys to add to the table
             print(f'Adding \'{keys["name"]}\'')
-            logging.info(f"Adding {url} to the database")
+            logging.debug(f"Adding {keys} to the database")
 
             if "files" in keys:             # This means we passed a single
                 to_download.append(item)    # Mark it for downloading
-                files = keys["files"]       # Get the files from the keys
-                for file in files:
-                    files_table[file] = {"type": "file"}
-                    logging.info(f"Adding {file} to the database")
+                files_to_add = deepcopy(keys["files"])
+                for filepath in files_to_add:  # Add some extra info we only want in the files db
+                    file = files_to_add["files"] 
+                    file["parent"] = id
+                    file["downloaded"] = False
+                    files[filepath] = file # Add the files to the local dict
 
             # Handle children
             if "children" in keys:                              # If any children appeared when we got keys
@@ -167,23 +168,30 @@ class YouMirror:
                     to_download.append(child)           # Mark this YouTube object for downloading
                     child_id = parser.get_id(child)     # Get the id for the single
 
-                    child_keys = parser.get_keys(child, child_keys, active_options, files_table) # Get the rest of the keys from the pytube object
+                    child_keys = parser.get_keys(child, child_keys, active_options, paths_table) # Get the rest of the keys from the pytube object
                     print(f'Adding \'{child_keys["name"]}\'')
-                    singles[child_id] = child_keys
+                    logging.debug(f"Adding {child_keys} to the database")
+                    singles[child_id] = child_keys      # Add the single to be added later
                     logging.info(f"Adding {child} to the database")
-                    f = child_keys["files"]             # Get the files from the keys
-                    for file_type in f:
-                        for file in f[file_type]:
-                            filename = file
-                            info = {"type": file_type, "downloaded": False, "parent": child_id, "caption_type": "", "size": ""}
-                            files[filename] = info
+                    files_to_add = deepcopy(child_keys["files"])
+                    for filepath in files_to_add:    # Add some extra info we only want in the files db
+                        file = files_to_add[filepath]
+                        file["parent"] = child_id
+                        file["downloaded"] = False
+                        files[filepath] = file   # Add the files to the local dict
+                    
+        print("This is what files looks like", files)            
 
         # Calculate download size
         download_size: int = 0
         for item in to_download:
-            id = parser.get_id(item)                        # Get the id
-            f =  parser.unpack_files(singles[id]["files"])   # Get the list of files
-            download_size += downloader.calculate_filesize(item, file_type, active_options)
+            single =  singles[parser.get_id(item)]  # Get the keys for the single
+            for file in single["files"]:            # Get the files
+                file_type = file["type"]            # Get the file type "video", "audio", "caption"
+                filesize = downloader.calculate_filesize(item, file_type, active_options)   # Get the filesize
+                files[file]["filesize"] = filesize  # Record the filesize in the db
+                download_size += filesize           # Add the filesize to the total download size
+            
 
         # Show download size & ask for confirmation
         if (not kwargs.get("force", False)) or kwargs.get("no_dl", False):
@@ -200,7 +208,8 @@ class YouMirror:
             table[id] = keys                                # Add it to the database
         else:
             singles[id] = keys  # Else, add it to the singles pile
-        singles_table = databaser.get_table(db_path, "single")  # Add all the children
+        singles_table = databaser.get_table(db_path, "single")  # Where yt videos go
+        files_table = databaser.get_table(db_path, "single")  # Where files go
         # Commit to database
         files_table.update(files)       # Record the files in the database
         paths_table.update(paths)       # Record the paths in the database
