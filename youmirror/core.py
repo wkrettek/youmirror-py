@@ -11,6 +11,7 @@ from pathlib import Path    # Helpful for ensuring text inputs translate well to
 from datetime import datetime
 import shutil               # For removing whole directories    
 from copy import deepcopy   # For deep copying dictionaries
+import os
 
 '''
 This is the core module
@@ -286,22 +287,58 @@ class YouMirror:
             logging.info(f"Could not find {url} not found in the mirror")
             return
 
-        to_remove = list[str]()             # List of filepaths to delete
+        yt_string = parser.link_type(url)   # Get the type of youtube object "channel", "playlist", "single"
+        table = databaser.get_table(db_path, yt_string, autocommit=False)  # Get the appropriate database
+        keys = table[id]                    # Get the keys for the object
+        path = Path(root)/Path(keys["path"])                 # Get the path for the object
+        path_size = 0
+        files_to_remove = set()
+        for root, dirs, files in os.walk(path, topdown=False):  # Find all the files in the directory
+            for name in files:                                  # Search through all the files
+                filepath = os.path.join(root, name)             # Get the filepath
+                print(filepath) 
+                filepath = Path(filepath)
+                path_size += filepath.stat().st_size      # Add the filesize to the total size
+                filepath = '/'.join(filepath.parts[1:])      # Get the filepath without the root
+                files_to_remove.add(filepath)                   # Add it to the files to remove
+        print(f"Removing will delete {printer.human_readable(path_size)} from the mirror")
 
+        # Ask for confirmation
+        if (not kwargs.get("force", False)) or kwargs.get("no_rm", False):
+            if input("Continue? (y/n) ") != "y":                    # Get confirmation
+                print("Aborting")
+                return
 
-        # If it has children, collect those too
-        # Get all the files and paths
-        # Unlink all
+        print("Deleting files...")
+        shutil.rmtree(path)                                       # Remove the directory
 
-        # Delete all the ids from the database
+        print("Cleaning database...")
+        # Open databases
+        singles_to_remove = set()   # Collect the singles
+        if not (singles_table := databaser.get_table(db_path, "single")):   # Get the singles table if not already initialized
+            singles_table = table
+        files_table = databaser.get_table(db_path, "files") # Get the files table
+        paths_table = databaser.get_table(db_path, "paths") # Get the paths table
+        if "children" in table[id]:                         # If it has children
+            children = table[id]["children"]                # Get the children
+            for child in children:                          # Search through all the children
+                singles_to_remove.add(child)                # Add each child to be removed
+        
 
-        # Commit to the database
-
-        # Clear database
+        print("Saving changes...")
+        # Commit the changes to the database
+        del paths_table[keys["path"]]                             # Remove the path from the database
+        for file in files_to_remove:
+            del files_table[file]                                 # Delete the files from the database
+        for single in singles_to_remove:
+            del singles_table[single]                             # Delete the singles from the database
+        del table[id]                                             # Delete the object from the database
+        files_table.commit()                                    # Commit the changes to the database          
+        singles_table.commit()
+        table.commit()
 
         # Update config file
-        del self.config[yt_string][id]                  # TODO doing it directly for now, but we should go through the configurer
-        # configurer.remove_yt(yt_string, id, self.config, specs)       # Add the url to the config # TODO TODO TODO
+        del self.config[yt_string][id]  # TODO doing it directly for now, but we should go through the configurer
         configurer.save_config(config_path, self.config)
 
     
