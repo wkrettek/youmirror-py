@@ -1,30 +1,46 @@
-cli
-    add
-        be able to add multiple urls
-        can specify dry run
-    show
-        show current state of database
-            [1] list all channels, playlists, 
+
     
 printer
     [1] show name, type, url, num children, size
+    Do some basic formatting
+
+cli
+    remove
+        removes paths
+    sync
+        Start this after remove
+        Be able to specify more options
+            Like resolution
+    add
 
 Parser
     Be able to rip all the metadata
         Somehow rip just enough not to cause any errors.. I guess just skip metadata we can't get that's not crucial
     for get_keys():
         resolve collision is maybe a database thing?
+
 Helper
-    Can I rename this thing??
-    --- I changed the filetree type back to tall by default
+    Remove spaces from filenames?
+    Calculate the size of the file additions and send to printer before downloading
+
 Databaser
+    Files will now be stored as dictionary {"audio": [""], "video": [""], "captions": ["_en","_a.en"]}
+    When downloading, at to files table the type, "video", "audio" etc. and the resolution and bit rate
+    Do all commits at once no matter what
+        Have to make this happen for filetree integrity
+            Or I guess I could just do a check every time if it's been added?
+                Or I could revert like poetry does?
     Wrap up the databasing as much as possible to abstract it from database implementation
         using sqlitedict for now
+    If a file cannot be downloaded. Mark it as not downloaded or something
+
+
 Downloader
-    Calculate all the filepaths before hand, only download at the very end
-    Should be very specific
-        You only pass video objects when you're ready to download
-        Somehow have to be able to pass all the different specifiers
+    Download is best effort but maybe could be simplified a bit
+    Download specified resolution and combine audio with ffmpeg?
+        --I'm doing this rn. Have to validation test a lot and make sure it doens't call ffmpeg if they don't have it
+    Download audio could take a specified bitrate
+
 
 
 
