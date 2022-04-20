@@ -38,6 +38,7 @@ def add(
     root : Optional[str] = typer.Argument(default=None, help='Root directory for the mirror'),
     resolution : Optional[str] = typer.Option("720p", "--resolution", help='Preferred resolution to download'),
     captions: Optional[bool] = typer.Option(False, "--captions", show_default=True, help='Download captions if available'),
+    no_video : Optional[bool] = typer.Option(False, "--no-video", show_default=True, help='Don\'t download video'),
     audio: Optional[bool] = typer.Option(False, "--audio", show_default=True, help='Download audio separately'),
     thumbnail: Optional[bool] = typer.Option(False, "--thumbnail", show_default=True, help='Download thumbnail'),
     force : Optional[bool] = typer.Option(False, "--force", help='Force download without asking confirmation'),
@@ -47,7 +48,7 @@ def add(
     '''
     Adds the url to the mirror and downloads videos
     '''
-    kwargs = {"resolution": resolution, "captions": captions, "audio": audio, "thumbnail": thumbnail, "force": force, "dry_run": dry_run, "no_dl": no_dl}
+    kwargs = {"resolution": resolution, "dl_video": not no_video, "dl_captions": captions, "dl_audio": audio, "dl_thumbnail": thumbnail, "force": force, "dry_run": dry_run, "no_dl": no_dl}
     yt = YouMirror()
     yt.add(url, root, **kwargs)
     return

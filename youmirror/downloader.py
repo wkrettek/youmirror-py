@@ -13,7 +13,7 @@ import pytube.request as request
 import logging
 from pathlib import Path
 import subprocess
-from urllib.request import urlretrieve  # Using this to download thumbnails
+from urllib.request import urlretrieve, urlopen  # Using this to download thumbnails
 
 file_types = {"video", "caption", "audio", "thumbnail"} # TODO download js and raw html?
 # Order resolutions from highest to lowest in a list
@@ -96,8 +96,8 @@ def calculate_thumbnail_filesize(yt: YouTube, options: dict):
     Calculates the size of a thumbnail file
     '''
     url = yt.thumbnail_url          # Get the thumbnail url
-    filesize = request.seq_filesize(url)    # Use pytube's request module to get the filesize
-    return filesize
+    file = urlopen(url)    # Use pytube's request module to get the filesize
+    return file.length
 
 
 def calculate_filesize(yt: YouTube, file_type: str, options: dict) -> int:
