@@ -242,9 +242,9 @@ class YouMirror:
                 file_type = data["type"]           # Get the file type 
                 if file_type == "caption":          # If it's a caption, use options to set the caption language
                     active_options["caption_type"] = data["caption_type"] # Set the caption type
-                if not Path(file).exists():     # If the file doesn't exist
-                    filepath = str(path/Path(file)) # Inject the root that was passed from the add() function call
-                    if downloader.download_single(item, filepath, active_options): # Download it
+                if not Path(f).exists():     # If the file doesn't exist
+                    filepath = str(path/Path(f)) # Inject the root that was passed from the add() function call
+                    if downloader.download_single(item, file_type, filepath, active_options): # Download it
                         files_table[f]["downloaded"] = True # If successful mark it as downloaded
 
     def remove(
