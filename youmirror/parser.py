@@ -165,6 +165,7 @@ def get_files(path: str, yt_name: str, options: dict) -> dict:
         "thumbnail": options["dl_thumbnail"]
     }
     files = dict()
+
     for file_type in to_download:
         if to_download[file_type]:   # Check the boolean value matching the file_type
             if file_type == "caption":
@@ -178,16 +179,6 @@ def get_files(path: str, yt_name: str, options: dict) -> dict:
                 files[filepath] = {"type": file_type}                            # Add to files
 
     return files
-
-# def unpack_files(files: dict) -> dict:
-#     '''
-#     Takes a dictionary in the form of {"video": [], "audio", [], "caption": [], "thumbnail": []}
-#     And converts to {filename:{"parent": parent, "type": type, "caption_type", "downloaded": False, "size": size}, filename:{"parent": parent, "type": type, "caption_type", "downloaded": False, "size": size}}
-#     '''
-#     for file_type in files:
-        
-#     return f
-
 
 def is_available(yt: YouTube) -> bool:
     '''

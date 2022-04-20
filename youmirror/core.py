@@ -42,6 +42,9 @@ class YouMirror:
         Create a new mirror directory at the given path
         '''
 
+        if not root:    # If no root is given, use the current directory
+            root = self.root
+
         # Get our wrapped up Paths
         path = Path(root)
         config_path = path/Path(self.config_file)
@@ -115,7 +118,7 @@ class YouMirror:
 
         # Collect the specs
         try:
-            id = parser.get_id(yt)                  # Get the id of the pytube object
+            id = parser.link_id(url)                # Get the id of the pytube object
             name = parser.get_name(yt)              # Get the name of the pytube object
             url = parser.get_url(yt)                # Get the url of the pytube object
             last_updated = datetime.now().strftime('%Y-%m-%d')     # Get the date of the pytube object
@@ -190,7 +193,7 @@ class YouMirror:
             single =  singles[parser.get_id(item)]  # Get the keys for the single
             for filename in single["files"]:        # Get the filenames
                 file_type = files[filename]["type"] # Get the file type "video", "audio", "caption"
-                print(f"Calculating filesize for {file_type} {filename}")
+                print(f"Calculating filesize for {file_type} {str(Path(filename).name)}")
                 filesize = downloader.calculate_filesize(item, file_type, active_options)   # Get the filesize
                 files[filename]["filesize"] = filesize  # Record the filesize in the db
                 download_size += filesize           # Add the filesize to the total download size
@@ -261,10 +264,12 @@ class YouMirror:
             root = self.root
 
         # Config setup
+        print("Setting up config")
         path = Path(root)
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
         db_path = path/Path(self.db)                # Get the db file & ensure it exists
 
+        print("Loading config")
         if not config_path.is_file():                           # Verify the config file exists   
             logging.error(f'Could not find config file in root directory \'{path}\'')
             return
@@ -273,6 +278,7 @@ class YouMirror:
             return
         self.config = configurer.load_config(config_path)       # Load the config file
         
+        print("Getting pytube object")
         # Parse the url & create pytube object
         if not (yt_string := parser.link_type(url)):   # Get the url type (channel, playlist, single)
             logging.error(f'Invalid url \'{url}\'')
@@ -280,10 +286,13 @@ class YouMirror:
         yt = parser.get_pytube(url)         # Get the proper pytube object
         id = parser.get_id(yt)              # Get the id for the object
 
+        print("Getting checking for url")
         # Check if the id is already in the config
         if configurer.yt_exists(yt_string, id, self.config):
+            print(f'Removing \'{yt_string}\' with id \'{id}\'')
             logging.info(f"Removing {url} from the mirror")
         else:
+            print(f"{url} is not in the mirror")
             logging.info(f"Could not find {url} not found in the mirror")
             return
 
@@ -298,9 +307,6 @@ class YouMirror:
                 filepath = os.path.join(root, name)             # Get the filepath
                 print(filepath) 
                 filepath = Path(filepath)
-                path_size += filepath.stat().st_size      # Add the filesize to the total size
-                filepath = '/'.join(filepath.parts[1:])      # Get the filepath without the root
-                files_to_remove.add(filepath)                   # Add it to the files to remove
         print(f"Removing will delete {printer.human_readable(path_size)} from the mirror")
 
         # Ask for confirmation
@@ -310,7 +316,7 @@ class YouMirror:
                 return
 
         print("Deleting files...")
-        shutil.rmtree(path)                                       # Remove the directory
+        shutil.rmtree(path, ignore_errors=True)                                       # Remove the directory
 
         print("Cleaning database...")
         # Open databases
@@ -323,6 +329,15 @@ class YouMirror:
             children = table[id]["children"]                # Get the children
             for child in children:                          # Search through all the children
                 singles_to_remove.add(child)                # Add each child to be removed
+        elif yt_string == "single":                         # If it's a single
+            singles_to_remove.add(id)                       # Add it to be removed
+        
+        for singles in singles_to_remove:
+            files = singles_table[singles]["files"]
+            for file in files:
+                files_to_remove.add(file)
+
+        print("files to remove", files_to_remove)
         
 
         print("Saving changes...")
