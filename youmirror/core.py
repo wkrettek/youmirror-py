@@ -140,7 +140,6 @@ class YouMirror:
 
 
         paths_table = databaser.get_table(db_path, "paths") # Need this to resolve collisions (only checking paths)
-        singles = dict()                                    # Create a dict of singles
 
         # Add the items to the database
         to_download: list[YouTube] = []         # List of items to download
@@ -155,44 +154,49 @@ class YouMirror:
             paths_to_add.update({keys["path"]: {"parent": id}})        # Add the path to the paths dict
             if "files" in keys:             # This means we passed a single
                 to_download.append(item)    # Mark it for downloading
-                singles[id] = keys      # Add the single to be added later  
-                files_to_add = deepcopy(keys["files"])  # Copy the files dict
-                for filepath in files_to_add:  # Add some extra info we only want in the files db
-                    file = files_to_add[filepath] 
+                singles_to_add[id] = keys      # Add the single to be added later  
+                files = deepcopy(keys["files"])  # Copy the files dict
+                for filepath in files:  # Add some extra info we only want in the files db
+                    file = files[filepath] 
                     file["parent"] = id
                     file["downloaded"] = False
-                    files[filepath] = file # Add the files to the local dict
+                    files_to_add[filepath] = file # Add the files to the local dict
 
             # Handle children
             if "children" in keys:                              # If any children appeared when we got keys
-                inject_keys = {"parent_id": id, "parent_name": 
-                keys["name"], "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
                 print(f'Found {len(keys["children"])} Youtube videos')
 
                 for child in parser.get_children(item):   # We have to get the children again to get urls instead of ids :/
+
+                    inject_keys = {"parent_id": id, "parent_name": 
+                    keys["name"], "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
 
                     child = parser.get_pytube(child)    # Wrap those children in pytube objects
                     to_download.append(child)           # Mark this YouTube object for downloading
                     child_id = parser.get_id(child)     # Get the id for the single
 
                     child_keys = parser.get_keys(child, inject_keys, active_options, paths_table) # Get the rest of the keys from the pytube object
-                    paths[keys["path"]] = {}        # Add the path to the paths dict
+
+                    singles_to_add[child_id] = child_keys                           # Mark the single to be added
                     print(f'Adding \'{child_keys["name"]}\'')
                     logging.debug(f"Adding {child_keys} to the database")
-                    singles[child_id] = child_keys      # Add the single to be added later
-                    logging.info(f"Adding {child} to the database")
-                    files_to_add = deepcopy(child_keys["files"])    # Copy the files dict
-                    for filepath in files_to_add:    # Add some extra info we only want in the files db
-                        file = files_to_add[filepath]
+
+                    paths_to_add.update({child_keys["path"]: {"parent": child_id}}) # Mark the path to be added
+                    logging.debug(f'Adding path {child_keys["path"]} with id {child_id}')
+
+                    files = deepcopy(child_keys["files"])    # Copy the files dict
+                    for filepath in files:    # Add some extra info we only want in the files db
+                        file = files[filepath]
                         file["parent"] = child_id
                         file["downloaded"] = False
-                        files[filepath] = file   # Add the files to the local dict          
+                        logging.debug((f'Adding file {filepath} with keys {file}'))
+                        files_to_add[filepath] = file   # Add the files to the local dict   
 
         # Calculate download size
         download_size: int = 0
         if not kwargs.get("no_dl", False):
             for item in to_download:
-                single =  singles[parser.get_id(item)]  # Get the keys for the single
+                single =  singles_to_add[parser.get_id(item)]  # Get the keys for the single
                 for filename in single["files"]:        # Get the filenames
                     file_type = files[filename]["type"] # Get the file type "video", "audio", "caption"
                     print(f"Calculating filesize for {file_type} {str(Path(filename).name)}")
@@ -221,13 +225,13 @@ class YouMirror:
             table[id] = keys                                # Add it to the database
             table.commit()                                  # Commit the changes to the database
         else:
-            singles[id] = keys  # Else, add it to the singles pile
+            singles_to_add[id] = keys  # Else, add it to the singles pile
         singles_table = databaser.get_table(db_path, "single")  # Where yt videos go
         files_table = databaser.get_table(db_path, "files")  # Where files go
         # Commit to database
-        files_table.update(files)       # Record the files in the database
-        paths_table.update(paths)       # Record the paths in the database
-        singles_table.update(singles)   # Record all the singles
+        files_table.update(files_to_add)       # Record the files in the database
+        paths_table.update(paths_to_add)       # Record the paths in the database
+        singles_table.update(singles_to_add)   # Record all the singles
         files_table.commit()            # Commit the changes to the database
         paths_table.commit()            # Commit the changes to the database
         singles_table.commit()          # Commit the changes to the database
@@ -339,41 +343,35 @@ class YouMirror:
         if not (singles_table := databaser.get_table(db_path, "single")):   # Get the singles table if not already initialized
             singles_table = table
         for single in singles_to_remove:
-            print("Files = ", singles_table[single]["files"])
+            path = singles_table[single]["path"]
+            paths_to_remove.add(path)
+            # print(f'Path for single {single} = {path}')
+            for filename in singles_table[single]["files"].keys():
+                files_to_remove.add(filename)
+            # print("Files = ", singles_table[single]["files"])
 
-        # print("Cleaning database...")
-        # # Open databases
-        # singles_to_remove = set()   # Collect the singles
-        # if not (singles_table := databaser.get_table(db_path, "single")):   # Get the singles table if not already initialized
-        #     singles_table = table
-        #     singles_to_remove.add(id)                       # Mark it to be removed
-        # files_table = databaser.get_table(db_path, "files") # Get the files table
-        # paths_table = databaser.get_table(db_path, "paths") # Get the paths table
-        # if "children" in table[id]:                         # If it has children
-        #     children = table[id]["children"]                # Get the children
-        #     for child in children:                          # Search through all the children
-        #         singles_to_remove.add(child)                # Mark each child to be removed
+        print("singles to remove", singles_to_remove)
+        print("paths to remove", paths_to_remove)
+        print("files to remove", files_to_remove)
 
-        # # Collect the filepaths from the singles
-        # for single in singles_to_remove:
-        #     files = singles_table[single]["files"]
-        #     for file in files:
-        #         files_to_remove.add(file)
+        print("Cleaning database...")
+        # Open databases
+        files_table = databaser.get_table(db_path, "files") # Get the files table
+        paths_table = databaser.get_table(db_path, "paths") # Get the paths table        
 
-        # print("files to remove", files_to_remove)
-        
-
-        # print("Saving changes...")
-        # # Commit the changes to the database
-        # del paths_table[keys["path"]]                             # Remove the path from the database
-        # for file in files_to_remove:
-        #     del files_table[file]                                 # Delete the files from the database
-        # for single in singles_to_remove:
-        #     del singles_table[single]                             # Delete the singles from the database
-        # del table[id]                                             # Delete the object from the database
-        # files_table.commit()                                    # Commit the changes to the database          
-        # singles_table.commit()
-        # table.commit()
+        print("Saving changes...")
+        # Commit the changes to the database
+        for path in paths_to_remove:        # Remove the paths from the database
+            del paths_table[path]
+        for file in files_to_remove:
+            del files_table[file]                                 # Delete the files from the database
+        for single in singles_to_remove:
+            del singles_table[single]                             # Delete the singles from the database
+        if yt_string != "single":
+            del table[id]                                             # Delete the object from the database
+        files_table.commit()                                    # Commit the changes to the database          
+        singles_table.commit()
+        table.commit()
 
         # Update config file
         del self.config[yt_string][id]  # TODO doing it directly for now, but we should go through the configurer
