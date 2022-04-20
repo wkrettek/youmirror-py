@@ -18,7 +18,7 @@ def sync(
     no_update :Optional[bool] = typer.Option(default=False, show_choices=False, help="Syncs the mirror without updating"),
     ):
     '''
-    Syncs the filetree to the database
+    Checks for new videos and downloads them
     '''
     print(f'Dry run is {dry_run}')
     return
@@ -77,7 +77,7 @@ def update(
     root : Optional[str] = typer.Argument(default=None, help='Root directory for the mirror'),
     ):
     '''
-    Checks if new files were added to channels or playlists and updates mirror database
+    Checks for new videos without downloading
     '''
     ym = YouMirror()
     ym.update(root)
@@ -91,12 +91,12 @@ def show(root: str = typer.Argument(None)):
     ym = YouMirror()
     ym.show(root)
 
-@app.command()
-def config(root: str = typer.Argument(None)):
-    '''
-    Allows you edit the config file
-    '''
-    pass  
+# @app.command()
+# def config(root: str = typer.Argument(None)):
+#     '''
+#     Allows you edit the config file
+#     '''
+#     pass  
 
 # @app.command()
 # def archive(root: str = typer.Argument(None)):

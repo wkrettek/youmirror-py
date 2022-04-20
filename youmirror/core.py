@@ -328,9 +328,9 @@ class YouMirror:
         if "children" in table[id]:                         # If it has children
             children = table[id]["children"]                # Get the children
             for child in children:                          # Search through all the children
-                singles_to_remove.add(child)                # Add each child to be removed
+                singles_to_remove.add(child)                # Mark each child to be removed
         elif yt_string == "single":                         # If it's a single
-            singles_to_remove.add(id)                       # Add it to be removed
+            singles_to_remove.add(id)                       # Mark it to be removed
         
         for singles in singles_to_remove:
             files = singles_table[singles]["files"]
@@ -407,7 +407,7 @@ class YouMirror:
         root: str = None
         ) -> None:
         '''
-        Updates the database without downloading anything
+        Updates the database without downloading anything (returns objects to download if you so choose)
         '''
         if not root:
             root = self.root
@@ -446,7 +446,8 @@ class YouMirror:
 
 
         print("All set!")
-        return
+        to_download = set()
+        return to_download  
 
     def verify(
         self
