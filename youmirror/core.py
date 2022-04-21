@@ -171,7 +171,6 @@ class YouMirror:
 
                     inject_keys = {"parent_id": id, "parent_name": 
                     keys["name"], "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
-
                     child = parser.get_pytube(child)    # Wrap those children in pytube objects
                     to_download.append(child)           # Mark this YouTube object for downloading
                     child_id = parser.get_id(child)     # Get the id for the single
@@ -383,6 +382,7 @@ class YouMirror:
     def sync(
         self,
         root: str = None,
+        **kwargs: dict,
         ) -> None:
         '''
         Syncs the mirror against the config file
@@ -391,6 +391,7 @@ class YouMirror:
         if not root:
             root = self.root
 
+        # if not kwargs.get("no_update"):   # Unless we are skipping the update, update database
         # self.update(root)
 
         # Config setup
@@ -420,30 +421,45 @@ class YouMirror:
         files_to_download = dict()
         files_table = databaser.get_table(db_path, "files", autocommit=True)
         for filepath in files_table:                            # Search through the files table and find undownloaded files
-            downloaded = files_table[filepath]["downloaded"]    # Record if downloaded
+            file = files_table[filepath]                        # Get the file keys
+            downloaded = file["downloaded"]                     # Record if downloaded
+            # print("Checking file with keys ", file)
             if not downloaded:                                  # If not downloaded, mark it for downloading
-                files_to_download[filepath] = files_table[filepath]
-                filename = Path(filepath).name  # Get the filename for pretty printing
-                print(f"marking {filename} for download")
+                files_to_download[filepath] = file
+                # filename = Path(filepath).name  # Get the filename for pretty printing
+                # print(f"marking {filename} for download")
 
         print(f'Found {len(files_to_download)} files to download')
+        
+        # Download all the files
+        singles_table = databaser.get_table(db_path, "single")    
+        if len(files_to_download) > 0:
+            print("Downloading videos...")   
+            for filepath in files_to_download:          # Search through all the pytube objects we want to download
+                filename = str(Path(filepath).name)
+                print("Downloading ", filename)
+                file = files_to_download[filepath]      # Get keys for the filepath
+                logging.debug(f'Keys for file {filename} are {file}')
+                id = file["parent"]                     # Get the id for the parent
+                if id not in self.cache:
+                    url = singles_table[id]["url"]      # Get the url for the id in the database
+                    if id not in self.cache:                # Check if the cache has the yt object
+                        yt = parser.get_pytube(url)         # Get the yt object
+                        self.cache.update({id: yt})         # Add the id and the yt object to the cache
+                    else:
+                        yt = self.cache[id]             # Otherwise grab the yt object from the cache
+                file_type = file["type"]        # Get the file type 
+                if file_type == "caption":      # If it's a caption, use options to set the caption language
+                    active_options["caption_type"] = file["caption_type"] # Set the caption type
+                if not Path(filepath).exists():     # If the file doesn't exist
+                    filepath = str(path/Path(filepath)) # Inject the root that was passed from the add() function call
+            #         if downloader.download_single(item, file_type, filepath, active_options): # Download it
+            #             file["downloaded"] = True # If successful mark it as downloaded
+            #             files_table[filepath] = file # update the files table
+            #             files_table.commit()
 
-        # # Download all the files    
-        # if len(files_to_download) > 0:
-        #     print("Downloading videos...")   
-        #     for file in files_to_download:          # Search through all the pytube objects we want to download
 
-                # id = parser.get_id(item)            # Get the id
-                # files = singles_table[id]["files"]  # Get the files from the database
-                # for f in files:                     # Search through all the files
-                #     data = files_table[f]           # Get the data for this file
-                #     file_type = data["type"]        # Get the file type 
-                #     if file_type == "caption":      # If it's a caption, use options to set the caption language
-                #         active_options["caption_type"] = data["caption_type"] # Set the caption type
-                #     if not Path(f).exists():     # If the file doesn't exist
-                #         filepath = str(path/Path(f)) # Inject the root that was passed from the add() function call
-                #         if downloader.download_single(item, file_type, filepath, active_options): # Download it
-                #             files_table[f]["downloaded"] = True # If successful mark it as downloaded
+        print("All done!")
 
 
     def update(

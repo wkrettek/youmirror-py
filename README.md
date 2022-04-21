@@ -57,7 +57,7 @@ youmirror does all the organization and filetree-building so you don't have to. 
                     | -- files
 ```
             
-You may notice that I use the term 'single' to refer to a single youtube video. This is leaning into the fact that there is a lot of information that can be downloaded from a youtube video, including downloading the audio separately, or downloading the captions. Also, singles are youtube videos that were added separately from a playlist or a channel
+You may notice that I use the term 'single' to refer to a single youtube video. This is leaning into the fact that there is a lot of information that can be downloaded from a youtube video, including downloading the audio separately, or downloading the captions. Also, singles are youtube videos that were added separately from a playlist or a channel.
 
 
 ## Downloading
