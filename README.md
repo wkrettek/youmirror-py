@@ -9,6 +9,8 @@ You can install from github by using
 
 You can also git clone this repository and install with poetry
 
+youmirror is intended for python 3.8 and higher
+
 ## Description
 
 There are a lot of sites out there that will let you paste a youtube link and download a youtube video relatively quickly. You can even use pytube to download youtube videos relatively quickly. But writing a script to manage all this downloading is time-consuming and one-offs don't really make a consistent management system. This library is designed to address that issue.
@@ -64,7 +66,7 @@ You may notice that I use the term 'single' to refer to a single youtube video. 
 
 youmirror offers best-effort downloading. This means youmirror will attempt to download the best quality stream that matches your request. By default, youmirror will download at 720p if available. If 720p is not available, it will download the next best resolution for the video. 
 
-You can specify higher resolutions if you prefer, but Youtube does not serve higher res streams with combined audio, so if a higher resolution is specified, youmirror will find the highest quality audio stream and attempt to combine it with the video using `ffmpeg`. If you don't have `ffmpeg`, you can download it [here].(https://www.ffmpeg.org/download.html) It's not required, so you can download videos at up to 720p without it.
+You can specify higher resolutions if you prefer, but Youtube does not serve higher res streams with combined audio, so if a higher resolution is specified, youmirror will find the highest quality audio stream and attempt to combine it with the video using `ffmpeg`. If you don't have `ffmpeg`, you can download it [here](https://www.ffmpeg.org/download.html). It's not required, so you can download videos at up to 720p without it.
 
 
 ## Configuration
