@@ -20,7 +20,7 @@ def sync(
     '''
     Checks for new videos and downloads them
     '''
-    ym = YouMirror()
+    ym = YouMirror(root=root)
     ym.sync()
     return
 
@@ -29,8 +29,8 @@ def new(root : str = typer.Argument(None)):
     '''
     Create a new mirror in the given directory [default:'./']
     '''
-    ym = YouMirror()
-    ym.new(root)
+    ym = YouMirror(root=root)
+    ym.new()
     return
 
 @app.command()
@@ -50,8 +50,8 @@ def add(
     Adds the url to the mirror and downloads videos
     '''
     kwargs = {"resolution": resolution, "dl_video": not no_video, "dl_captions": captions, "dl_audio": audio, "dl_thumbnail": thumbnail, "force": force, "dry_run": dry_run, "no_dl": no_dl}
-    yt = YouMirror()
-    yt.add(url, root, **kwargs)
+    ym = YouMirror(root=root)
+    ym.add(url, **kwargs)
     return
 
 @app.command()
@@ -64,8 +64,8 @@ def remove(
     Removes the url from the mirror and deletes all files
     '''    
     kwargs = {"no_rm": no_rm}
-    ym = YouMirror()
-    ym.remove(url, root, **kwargs)
+    ym = YouMirror(root=root)
+    ym.remove(url, **kwargs)
 
 # @app.command()
 # def check():
@@ -91,8 +91,8 @@ def show(root: str = typer.Argument(None)):
     '''
     Shows the state of the mirror
     '''
-    ym = YouMirror()
-    ym.show(root)
+    ym = YouMirror(root=root)
+    ym.show()
 
 # @app.command()
 # def config(root: str = typer.Argument(None)):

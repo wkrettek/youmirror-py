@@ -1,29 +1,29 @@
 '''
-
 This module creates a database and manages it
 ----
 I've realized that the database is the most important thing in this whole project. 
 With the database, you should be able to rebuild the whole filetree.
 This means it should contain data from both the config file and filetree
+----
 db
 | -- channels
-        | -- id:        primary key (comes from channel_uri)
-        | -- url:       url for the channel
-        | -- children:  id (primary key for singles)
+        | -- url        primary key
+        | -- id:        extracted from url
+        | -- children:  urls (primary key for singles)
         | -- config:    options dict from config (examples: "resolution" "locked") 
         | -- path:      path "channels/channel_name"
 
 | -- playlists
-        | -- id:        primary key
-        | -- url:       url for the playlist
-        | -- children:  id (primary key for singles)
+        | -- url        primary key
+        | -- id:        extracted from url
+        | -- children:  url (primary key for singles)
         | -- config:    options dict from config (examples: "resolution" "locked") 
         | -- path:      path "playlists/playlist_name"
 | -- singles
-        | -- id:        primary key
         | -- url:       url for the single
+        | -- id:        primary key 
         | -- type:      ("channel", "playlist" or "single")
-        | -- parent_id: id (primary key for either a channel or playlist or none)
+        | -- parent:    url for parent (primary key for either a channel or playlist or none)
         | -- parent_name: name of the parent
         | -- config:    options dict from config (this will match whatever the parent has if there is one)
         | -- files
@@ -33,16 +33,16 @@ db
                             | -- resolution:    "480p", "720p", "1080p" Just for videos
 | --- paths
         | -- name:      path name "singles/single_name/", "channels/channel_name"
-        | -- parent     id of parent channel or playlist
+        | -- parent     url of parent channel or playlist or single
         | -- size:      total size of files inside
 | --- files:            dictionary that tracks all the files we have
         | -- filepath:  primary key, Ex: "singles/single_name/single_name.mp4"
-        | -- parent:    id of parent single
+        | -- parent:    url of parent single
         | -- type:      file type: "video", "audio", "caption", "thumbnail"
-        | -- caption_type: "en, a.en, fr"       # TODO this should probably be language
-        | -- resolution: "1080p", "720p" etc
+        | -- language:  "en, a.en, fr"
+        | -- resolution:"1080p", "720p" etc
         | -- bitrate    Audio bitrate
-        | - downloaded: True/False
+        | -- downloaded: True/False
         | -- size:      file size
 
 I need to abstract the database management as much as possible so it's easy to swap out.

@@ -7,7 +7,6 @@ Databaser
     If I change the databasing, the database will still send the core a dict no matter what
 
 core
-    utilize cache more
     start wrapping up some of the repeated functionality
         simplify top level core code as much as possible so it's easier to troubleshoot things
 
@@ -32,12 +31,6 @@ cli
             Finds children
             If there are new children
                 Add them to the database
-
-helper
-    I think I will rename this to filer. How does that sound? Or filing cabinet? That would be funny
-
-parser
-    probably gonna rename this to tuber because the I will free up the parser for the command line and because tuber is a funny name
 
 
 
