@@ -36,23 +36,32 @@ def get_video_stream(yt: YouTube, options: dict) -> Stream:
     '''
     Gets the video stream from the video
     '''
-    if options["has_ffmpeg"]:             # If resolution is specified
-        resolution = options["resolution"]  # Get the resolution from the options
-    else:
-        return yt.streams.filter(progressive=True, subtype="mp4").order_by("resolution").last()  # Else, get the highest res progressive stream (usually 720p)
-    stream = None       # Initialize the stream
-    find_res = iter(resolutions[resolutions.index(resolution):]) # Iterate through the resolutions
-    while not stream:   # Until we find a good one
-        streams = yt.streams.filter(subtype="mp4", resolution=resolution) # Filter streams by resolution
-        stream = next(iter(streams), None)  # Get the first stream or none if there is no stream
-        resolution = next(find_res) # Get the next resolution
+    try:
+        if options["has_ffmpeg"]:             # If resolution is specified
+            resolution = options["resolution"]  # Get the resolution from the options
+        else:
+            return yt.streams.filter(progressive=True, subtype="mp4").order_by("resolution").last()  # Else, get the highest res progressive stream (usually 720p)
+        stream = None       # Initialize the stream
+        find_res = iter(resolutions[resolutions.index(resolution):]) # Iterate through the resolutions
+        while not stream:   # Until we find a good one
+            streams = yt.streams.filter(subtype="mp4", resolution=resolution) # Filter streams by resolution
+            stream = next(iter(streams), None)  # Get the first stream or none if there is no stream
+            resolution = next(find_res) # Get the next resolution
+    except KeyError:
+        logging.exception("Could not find stream")
+        return None
     return stream
 
 def get_audio_stream(yt: YouTube, options: dict) -> Stream:
     '''
     Gets the audio stream from the video
     '''
-    return yt.streams.get_audio_only()  # This returns the highest bitrate audio stream by default (mp4)
+    try:
+        stream = yt.streams.get_audio_only()  # This returns the highest bitrate audio stream by default (mp4)
+        return stream
+    except Exception as e:
+        logging.exception(e)
+        return None
 
 def combine_video_audio(video_file: str, audio_file: str) -> str:
     '''
@@ -71,10 +80,13 @@ def calculate_video_filesize(yt: YouTube, options: dict) -> int:
     '''
     Calculates the size of a video file
     '''
-    video_stream = get_video_stream(yt, options)    # Get the video stream
-    filesize = video_stream.filesize                # Add the filesize
-    if not video_stream.includes_audio_track:       # If there is no audio
-        filesize += calculate_audio_filesize(yt, options)   # Add the audio filesize
+    try:
+        video_stream = get_video_stream(yt, options)    # Get the video stream
+        filesize = video_stream.filesize                # Add the filesize
+        if not video_stream.includes_audio_track:       # If there is no audio
+            filesize += calculate_audio_filesize(yt, options)   # Add the audio filesize
+    except Exception:
+        return 0    # Skip it if error
     return filesize
     
 
@@ -104,9 +116,13 @@ def calculate_filesize(yt: YouTube, file_type: str, options: dict) -> int:
     '''
     Gets the size of the file type 
     '''
-    file_type_to_func = {"video": calculate_video_filesize, "audio": calculate_audio_filesize, "caption": calculate_caption_filesize, "thumbnail": calculate_thumbnail_filesize}
-    func = file_type_to_func[file_type]
-    filesize = func(yt, options)
+    try:
+        file_type_to_func = {"video": calculate_video_filesize, "audio": calculate_audio_filesize, "caption": calculate_caption_filesize, "thumbnail": calculate_thumbnail_filesize}
+        func = file_type_to_func[file_type]
+        filesize = func(yt, options)
+    except:
+        logging.exception("Could not calculate filesize")
+        return 0
     return filesize
 
 def download_stream(stream: Stream, path: str, filename: str, options: dict) -> bool:
@@ -131,7 +147,7 @@ def download_video(yt: YouTube, path: str, filename: str, options: dict) -> str:
             combine_video_audio(filepath, audio_filepath) # Combine the video and audio
         return filename
     except Exception as e:
-        logging.exception(f'Could not download video at {str(path) + filename}')
+        logging.exception(f'Could not download video {filename}')
         return None
 
 def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> str:
@@ -141,14 +157,18 @@ def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> st
     Probably should just implement it in this library until pytube is updated
     '''
     # TODO handle for different languages
-    caption_type = options["caption_type"]  # Language was injected from above
-    captions = yt.captions            # Get the captions
-    for caption in captions:         # Iterate through the captions
-        if caption.code == caption_type:    # If the caption is the language we want
-            caption.download(output_path=path, title=filename) # Download the caption
-            return filename
-    print("Could not find caption for language: " + caption_type)
-    return None
+    try:
+        caption_type = options["caption_type"]  # Language was injected from above
+        captions = yt.captions            # Get the captions
+        for caption in captions:         # Iterate through the captions
+            if caption.code == caption_type:    # If the caption is the language we want
+                caption.download(output_path=path, title=filename) # Download the caption
+                return filename
+        print("Could not find caption for language: " + caption_type)
+        return None
+    except Exception as e:
+        logging.exception(f'Could not download caption {filename}')
+        return None
 
 def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
     '''
@@ -166,9 +186,8 @@ def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
             # subprocess.run(["ffmpeg", "-y", "-i", f"{path}{filename}", "-ss", "00:00:00", "-t", f"{length}", f"{path}{filename}"])
         return filename
     except Exception as e:
-        logging.exception(f'Could not download video {filename}')
+        logging.exception(f'Could not download audio {filename}')
         return None
-    return None
 
 
 def download_thumbnail(yt: YouTube, path: str, filename: str, options: dict) -> str:
@@ -200,7 +219,11 @@ def download_single(yt: YouTube, file_type: str, filepath: str, options: dict) -
 
     print(f"Downloading {filepath}")
 
-    path = str(Path(filepath).parent)    # Extract the path
-    filename = str(Path(filepath).name)  # Extract the filename
-    func = file_type_to_do[file_type]    # Figure out what to do
-    return func(yt, path, filename, options)    # Call the function
+    try:
+        path = str(Path(filepath).parent)    # Extract the path
+        filename = str(Path(filepath).name)  # Extract the filename
+        func = file_type_to_do[file_type]    # Figure out what to do
+        return func(yt, path, filename, options)    # Call the function
+    except Exception as e:
+        logging.exception(f'Could not download {file_type} {filepath}')
+        return None

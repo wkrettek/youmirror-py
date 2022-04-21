@@ -7,42 +7,43 @@ This means it should contain data from both the config file and filetree
 db
 | -- channels
         | -- id:        primary key (comes from channel_uri)
+        | -- url:       url for the channel
         | -- children:  id (primary key for singles)
         | -- config:    options dict from config (examples: "resolution" "locked") 
         | -- path:      path "channels/channel_name"
 
 | -- playlists
         | -- id:        primary key
+        | -- url:       url for the playlist
         | -- children:  id (primary key for singles)
         | -- config:    options dict from config (examples: "resolution" "locked") 
         | -- path:      path "playlists/playlist_name"
 | -- singles
         | -- id:        primary key
+        | -- url:       url for the single
         | -- type:      ("channel", "playlist" or "single")
         | -- parent_id: id (primary key for either a channel or playlist or none)
         | -- parent_name: name of the parent
         | -- config:    options dict from config (this will match whatever the parent has if there is one)
         | -- files
-                | --    example: ("video": ["/videos/singles/video_name.mp4])
-                | --    example: ("audio": ["/videos/singles/video_name_audio.mp4])
-                | --    example: ("caption": ["/videos/singles/video_name_en.srt, /videos/singles/video_name_en.srt_a.en"])
-                | --    example: ("thumbnail": ["/videos/singles/video_name.jpg])
+                | --    filepath:        primary key
+                            | -- type:          "video", "audio", "caption", "thumbnail"     
+                            | -- caption_type:  "en", "a.en"            # TODO this should probably be language
+                            | -- resolution:    "480p", "720p", "1080p" Just for videos
 | --- paths
         | -- name:      path name "singles/single_name/", "channels/channel_name"
         | -- parent     id of parent channel or playlist
         | -- size:      total size of files inside
 | --- files:            dictionary that tracks all the files we have
-        | -- name:      filepath "singles/single_name/single_name.mp4"
+        | -- filepath:  primary key, Ex: "singles/single_name/single_name.mp4"
         | -- parent:    id of parent single
         | -- type:      file type: "video", "audio", "caption", "thumbnail"
-        | -- caption_type: "en, a.en, fr"
+        | -- caption_type: "en, a.en, fr"       # TODO this should probably be language
         | - downloaded: True/False
         | -- size:      file size
-# TODO 
-I'm not a big fan of sqlite for this and I'd be happy to use something heavier if it's more robust. If I can find a good solution I will likely use that instead.
+
 I need to abstract the database management as much as possible so it's easy to swap out.
-The earlier we can find the best database the better, 
-because changing databases later on will fuck everybody's archives all up
+If a better databasing system comes along I will use that instead, but for now sqlitedict is fine.
 '''
 from sqlitedict import SqliteDict
 import logging
@@ -56,7 +57,7 @@ def get_table(path: Path, table: str, autocommit=True) -> SqliteDict:
     Returns a table from the database that matches the string
     '''
     if table in valid_tables:
-        return SqliteDict(path, tablename=table, autocommit=autocommit)   # TODO in the future I would like to wait to commit all at once, but I get concurrency errors without it
+        return SqliteDict(path, tablename=table, autocommit=autocommit)
     else:
         logging.error(f"Invalid table {table} given")
         return None

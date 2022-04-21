@@ -32,26 +32,25 @@ class YouMirror:
         self,
         root : str = ".",
         ) -> None:
-        self.root = root
-        self.db: str = databaser.db_file
-        self.config_file: str = configurer.config_file
-        self.config = dict()
-        self.cache: dict[id: str: Union[Playlist, Channel, YouTube]] = dict() # TODO This will be used so we don't have to reinitialize pytube objects we've already made, because initializing them is slow
+        self.root = root                                # Root directory
+        self.db: str = databaser.db_file                # Default name for the database file
+        self.config_file: str = configurer.config_file  # Default name for the config file
+        self.config: dict = None    # This stores the configs from the .toml file
+        self.cache: dict[id: str: Union[Playlist, Channel, YouTube]] = dict() # This is used so we don't have to reinitialize pytube objects we've already made, because initializing them is slow
             
     def new(self, root : str) -> None:
         '''
         Create a new mirror directory at the given path
         '''
 
-        if not root:    # If no root is given, use the current directory
-            root = self.root
+        if not root: root = self.root   # If no root is given, use the default directory
 
         # Get our wrapped up Paths
         path = Path(root)
         config_path = path/Path(self.config_file)
         db_path = path/Path(self.db)
         
-        # Create all the necessary files if they don't exists (path, config, db)
+        # Create all the necessary files if they don't exist (path, config, db)
         if not path.is_dir():
             logging.info(f"Creating new mirror directory \'{path}\'")
             helper.create_path(path)
@@ -112,36 +111,39 @@ class YouMirror:
             if configurer.yt_exists(yt_string, id, self.config):    # Check if the link is already in the mirror
                 print(f'url \'{url}\' already exists in the mirror')
                 return
-            if not (yt := parser.get_pytube(url)):                             # Get the proper pytube object
-                print(f'Could not parse url \'{url}\'')
-                return
+            if id not in self.cache:            # If the yt object is not already cached
+                yt = parser.get_pytube(url)     # Get the proper pytube object
+                self.cache[id] = yt             # Cache the object
+                if not yt:                      # If the object is invalid
+                    print(f'Could not parse url \'{url}\'')
+                    return
+            else:
+                yt = self.cache[id]                                 # Else, use the cached object
         except Exception as e:
             logging.exception(f"Could not parse url {url} due to {e}")
 
         # Collect the specs
         try:
-            id = parser.link_id(url)                # Get the id of the pytube object
-            name = parser.get_name(yt)              # Get the name of the pytube object
-            url = parser.get_url(yt)                # Get the url of the pytube object
-            last_updated = datetime.now().strftime('%Y-%m-%d')     # Get the date of the pytube object
+            name = parser.get_name(yt)                          # Get the name of the pytube object
+            last_updated = datetime.now().strftime('%Y-%m-%d')  # Mark today's date as the last updated
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
         specs = {"name": name, "url": url, "last_updated": last_updated, "resolution" :active_options["resolution"]}
 
         # Add the id to the config
-        to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add
-        yt_string = parser.yt_to_type_string(yt)                # Get the yt type string
-
-        print(f"Adding {url} to the mirror")        
+        yt_string = parser.yt_to_type_string(yt)    # Get the yt type string
+        print(f"Adding {url} to the mirror")
         logging.info(f"Adding {url} to the mirror")
-        self.config[yt_string][id] = specs                  # TODO doing it directly for now, but we should go through the configurer
+        self.config[yt_string][id] = specs          # TODO doing it directly for now, but we should go through the configurer
         # configurer.add_yt(yt_string, id, self.config, specs)       # Add the url to the config # TODO TODO TODO
+        to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add       
         to_add.append(yt)                                            # Mark it for adding
-
 
         paths_table = databaser.get_table(db_path, "paths") # Need this to resolve collisions (only checking paths)
 
         # Add the items to the database
+
+
         to_download: list[YouTube] = []         # List of items to download
         paths_to_add = dict()                   # Local dict of paths before we commit to db
         singles_to_add = dict()                 # Local dict of singles to add before committing to db
@@ -156,7 +158,7 @@ class YouMirror:
                 to_download.append(item)    # Mark it for downloading
                 singles_to_add[id] = keys      # Add the single to be added later  
                 files = deepcopy(keys["files"])  # Copy the files dict
-                for filepath in files:  # Add some extra info we only want in the files db
+                for filepath in files:  # Add some extra info we only want in the files table
                     file = files[filepath] 
                     file["parent"] = id
                     file["downloaded"] = False
@@ -184,7 +186,7 @@ class YouMirror:
                     logging.debug(f'Adding path {child_keys["path"]} with id {child_id}')
 
                     files = deepcopy(child_keys["files"])    # Copy the files dict
-                    for filepath in files:    # Add some extra info we only want in the files db
+                    for filepath in files:    # Add some extra info we only want in the files table
                         file = files[filepath]
                         file["parent"] = child_id
                         file["downloaded"] = False
@@ -285,8 +287,11 @@ class YouMirror:
         if not (yt_string := parser.link_type(url)):   # Get the url type (channel, playlist, single)
             logging.error(f'Invalid url \'{url}\'')
             return
-        yt = parser.get_pytube(url)         # Get the proper pytube object
-        id = parser.get_id(yt)              # Get the id for the object
+        id = parser.link_id(url)                # Get the id from the link
+        if id not in self.cache:
+            yt = parser.get_pytube(url)         # Get the proper pytube object
+        else:
+            yt = self.cache[id]                 # Get the cached pytube object
 
         print("Getting checking for url")
         # Check if the id is already in the config
@@ -351,25 +356,25 @@ class YouMirror:
                 files_to_remove.add(filename)
             # print("Files = ", singles_table[single]["files"])
 
-        print("singles to remove", singles_to_remove)
-        print("paths to remove", paths_to_remove)
-        print("files to remove", files_to_remove)
+        print(f'removing {len(singles_to_remove)} singles')
+        print(f'removing {len(paths_to_remove)} paths')
+        print(f'removing {len(files_to_remove)} files')
 
         print("Saving changes...")
         # Open databases
-        files_table = databaser.get_table(db_path, "files") # Get the files table
-        paths_table = databaser.get_table(db_path, "paths") # Get the paths table        
+        files_table = databaser.get_table(db_path, "files", autocommit=False) # Get the files table
+        paths_table = databaser.get_table(db_path, "paths", autocommit=False) # Get the paths table        
 
         # Commit the changes to the database
         for path in paths_to_remove:        # Remove the paths from the database
             del paths_table[path]
-        for file in files_to_remove:
-            del files_table[file]                                 # Delete the files from the database
-        for single in singles_to_remove:
-            del singles_table[single]                             # Delete the singles from the database
-        if yt_string != "single":
-            del table[id]                                             # Delete the object from the database
-        files_table.commit()                                    # Commit the changes to the database          
+        for file in files_to_remove:        # Delete the files from the database
+            del files_table[file]
+        for single in singles_to_remove:    # Delete the singles from the database
+            del singles_table[single]
+        if yt_string != "single":           # If it's a playlist or a channel
+            del table[id]                   # Delete the object from the database
+        files_table.commit()                # Commit the changes to the database          
         singles_table.commit()
         table.commit()
 
