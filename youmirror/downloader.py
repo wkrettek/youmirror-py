@@ -121,7 +121,6 @@ def download_video(yt: YouTube, path: str, filename: str, options: dict) -> str:
     Gets the proper stream for video and downloads it
     '''
     try:
-
         video_stream = get_video_stream(yt, options)                # Get the video stream
         download_stream(video_stream, path, filename, options)      # Download the video stream
         if not video_stream.includes_audio_track:                   # If no audio track
@@ -130,8 +129,10 @@ def download_video(yt: YouTube, path: str, filename: str, options: dict) -> str:
             download_stream(audio_stream, path, "temp_audio.mp4", options)  # Download the audio stream
             audio_filepath = str(Path(path)/Path("temp_audio.mp4")) # Get the audio filepath
             combine_video_audio(filepath, audio_filepath) # Combine the video and audio
+        return filename
     except Exception as e:
         logging.exception(f'Could not download video at {str(path) + filename}')
+        return None
 
 def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> str:
     '''
