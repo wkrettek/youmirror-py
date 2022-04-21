@@ -225,8 +225,6 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
     if yt_string in ["channel", "playlist"]:    # Do the same stuff for channels and playlists
         path = helper.calculate_path(yt_string, keys["name"], "")
         keys["path"] = helper.resolve_collision(path, paths, yt_id)
-        name = keys["name"] # TODO TEMP
-        print(f"{yt_string} {name} = {path}")
         return keys
 
     elif yt_string == "single":
@@ -246,10 +244,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
             temp = str(Path(keys["path"])/Path(name))
             keys["path"] = helper.resolve_collision(temp, paths, yt_id)
             
-        path = keys["path"]
-        # name = keys["name"] # TODO TEMP
-        # print(f"{yt_string} {name} = {path}")
-        keys["files"] = get_files(path, keys["name"], options)  # Get the files for this video
+        keys["files"] = get_files(keys["path"], keys["name"], options)  # Get the files for this video
         return keys
     else: 
         logging.error(f"Failed to get keys for {yt_string} {yt}")
