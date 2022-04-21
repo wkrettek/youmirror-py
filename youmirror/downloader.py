@@ -9,7 +9,6 @@ I could maybe make other types of downloads available. I think a possible one is
 
 '''
 from pytube import YouTube, StreamQuery, Stream, Caption, request
-import pytube.request as request
 import logging
 from pathlib import Path
 import subprocess

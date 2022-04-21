@@ -1,4 +1,5 @@
 '''
+
 This module creates a database and manages it
 ----
 I've realized that the database is the most important thing in this whole project. 
@@ -39,6 +40,8 @@ db
         | -- parent:    id of parent single
         | -- type:      file type: "video", "audio", "caption", "thumbnail"
         | -- caption_type: "en, a.en, fr"       # TODO this should probably be language
+        | -- resolution: "1080p", "720p" etc
+        | -- bitrate    Audio bitrate
         | - downloaded: True/False
         | -- size:      file size
 
@@ -61,6 +64,16 @@ def get_table(path: Path, table: str, autocommit=True) -> SqliteDict:
     else:
         logging.error(f"Invalid table {table} given")
         return None
+
+def set_item(id: str, keys: dict, table: SqliteDict) -> str:
+    '''
+    Sets an item in the given database table
+    '''
+    try:
+        table[id] = keys
+        return id
+    except Exception as e:
+        logging.error("Could not add id %s to table %s", id, table.tablename)
 
 # def set_id(table: SqliteDict, id: str, value: dict) -> None:
 #     '''

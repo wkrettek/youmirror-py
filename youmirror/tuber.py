@@ -2,20 +2,13 @@
 This module parses youtube urls, wraps them in pytube objects and 
 pulls information from pytube objects
 ---
-TODO I want to create pytube objects in the core later on because they take
-a little bit to initialize and if a video goes down I'm not sure you'll be able
-to create one again. Right now I'm using pytube objects to get my id,
-but I'll need to implement my own regex to get the id from a url instead of
-using pytube's
 '''
 from pytube import YouTube, Channel, Playlist, extract
 from typing import Union, Any, Callable
-import youmirror.helper as helper
+import youmirror.filer as filer
 from pytube.helpers import safe_filename
 from pathlib import Path
 import logging
-
-yt_type_to_string = {Channel: "channel", Playlist: "playlist", YouTube: "single"}    # Translation dict for convenience
 
 def link_type(url: str) -> str:
     '''
@@ -47,6 +40,7 @@ def yt_to_type_string(yt: Union[Channel, Playlist, YouTube]) -> str:
     '''
     Gets the type of the given pytube object and returns a string
     '''
+    yt_type_to_string = {Channel: "channel", Playlist: "playlist", YouTube: "single"}    # Translation dict for convenience
     yt_type = type(yt)                      # Get type of pytube object
     if yt_type in yt_type_to_string:        # If it is a valid type
         return yt_type_to_string[yt_type]   # Return the translated string
@@ -78,25 +72,35 @@ def is_available(yt: YouTube) -> bool:
         logging.exception(f"Video {yt.title} is not available due to {e}")   # Need to report the url or the title if we can
     return True
 
-def get_pytube(url: str) -> Union[YouTube, Channel, Playlist]:
+def get_pytube(url: str, cache: dict[str: Union[YouTube, Channel, Playlist]]) -> Union[YouTube, Channel, Playlist]:
     '''
-    Returns the proper pytube object from a url
-    TODO I want this to take a url and a cache and either return from the cache or return a new pytube object
+    Returns a new pytube object if not in the cache
+    '''
+    if url in cache:        # If the url is in the cache, return its object
+        return cache[url]
+
+    objects = {"channel": Channel, "playlist": Playlist, "single": YouTube}
+    url_type = link_type(url)                       # Returns what type of link it is (as string)
+    try:
+        object = wrap_url(url, objects[url_type])   # Wrap the url in the proper pytube object
+        cache[url] = object                         # Cache the object
+        return object
+    except Exception as e:
+        logging.exception(f"Failed to parse Youtube link due to {e}")
+        return None         # This indicates something went wrong, but we will handle it above
+
+def new_pytube(url: str) -> Union[YouTube, Channel, Playlist]:
+    '''
+    This replaces get_pytube and returns a new pytube object from url
     '''
     objects = {"channel": Channel, "playlist": Playlist, "single": YouTube}
-    url_type = link_type(url)                       # Returns what type of link it is
+    url_type = link_type(url)                       # Returns what type of link it is (as string)
     try:
         object = wrap_url(url, objects[url_type])   # Wrap the url in the proper pytube object
         return object
     except Exception as e:
         logging.exception(f"Failed to parse Youtube link due to {e}")
         return None         # This indicates something went wrong, but we will handle it above
-
-def resolve_pytube(yt: Union[Channel, Playlist, YouTube], do: dict[Any: Callable]):
-    '''
-    Returns the proper function to do for the pytube object
-    '''
-    return do[yt]
 
 def wrap_url(url: str, object: Union[YouTube, Channel, Playlist]) -> Union[YouTube, Channel, Playlist]:
     '''
@@ -172,11 +176,11 @@ def get_files(path: str, yt_name: str, options: dict) -> dict:
         if to_download[file_type]:   # Check the boolean value matching the file_type
             if file_type == "caption":
                 for caption_type in options["captions"]:    # We can download multiple caption types
-                    filename = helper.calculate_filename(file_type, f'{yt_name}_{caption_type}')    # Add f'_{caption_type}'
+                    filename = filer.calculate_filename(file_type, f'{yt_name}_{caption_type}')    # Add f'_{caption_type}'
                     filepath = str(Path(path)/filename)        # TODO THIS IS OVERKILL I WILL SIMPLIFY LATER
                     files[filepath] = {"type": file_type, "caption_type": caption_type}  # Add to files               
             else:
-                filename = helper.calculate_filename(file_type, yt_name)    # Calculate the filename
+                filename = filer.calculate_filename(file_type, yt_name)    # Calculate the filename
                 filepath = str(Path(path)/filename)                              # TODO THIS IS OVERKILL I WILL SIMPLIFY LATER
                 files[filepath] = {"type": file_type}                            # Add to files
 
@@ -211,6 +215,7 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
                 files       
     You can pass in a dict if you want to inject some values from above
     This is going to be a heavy function that calls from a lot of places. It's calculating a lot of things
+    TODO I think I might move this to the databaser
     '''
     to_download = { # Returns true/false if we want to download the video
         "video": options["dl_video"], 
@@ -224,8 +229,8 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
     yt_id = get_id(yt)                  # We use this to resolve collisions
 
     if yt_string in ["channel", "playlist"]:    # Do the same stuff for channels and playlists
-        path = helper.calculate_path(yt_string, keys["name"], "")
-        keys["path"] = helper.resolve_collision(path, paths, yt_id)
+        path = filer.calculate_path(yt_string, keys["name"], "")
+        keys["path"] = filer.resolve_collision(path, paths, yt_id)
         return keys
 
     elif yt_string == "single":
@@ -238,12 +243,12 @@ def get_keys(yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, p
             yt_string = keys["parent_type"]     # We are resetting the type to the parent type
 
         if "path" not in keys:                  # If no path was passed, calculate a new one
-            temp = helper.calculate_path(yt_string, "", keys["name"])
-            keys["path"] = helper.resolve_collision(temp, paths, yt_id)
+            temp = filer.calculate_path(yt_string, "", keys["name"])
+            keys["path"] = filer.resolve_collision(temp, paths, yt_id)
         else:   # Take the path and add the name
             name = safe_filename(keys["name"]).replace(' ', '_')
             temp = str(Path(keys["path"])/Path(name))
-            keys["path"] = helper.resolve_collision(temp, paths, yt_id)
+            keys["path"] = filer.resolve_collision(temp, paths, yt_id)
             
         keys["files"] = get_files(keys["path"], keys["name"], options)  # Get the files for this video
         return keys

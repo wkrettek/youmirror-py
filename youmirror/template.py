@@ -8,7 +8,6 @@ template = {
     "youmirror": 
     {
     "name": "",
-    "default_resolution": "best"
     },
 
     "channel":

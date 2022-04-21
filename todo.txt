@@ -1,3 +1,11 @@
+Databaser
+    ---- Heavily considering using the url as the primary key for the yt databases -----
+    Need to put lots and lots of keys in the database because we can easily remove them later if unused,
+    but can't easily put new ones in
+    Wrap up the databasing as much as possible to abstract it from database implementation
+        using sqlitedict for now
+    If I change the databasing, the database will still send the core a dict no matter what
+
 core
     utilize cache more
     start wrapping up some of the repeated functionality
@@ -25,12 +33,11 @@ cli
             If there are new children
                 Add them to the database
 
-Databaser
-    Need to put lots and lots of keys in the database because we can easily remove them later if unused,
-    but can't easily put new ones in
-    Wrap up the databasing as much as possible to abstract it from database implementation
-        using sqlitedict for now
-    If I change the databasing, the database will still send the core a dict no matter what
+helper
+    I think I will rename this to filer. How does that sound? Or filing cabinet? That would be funny
+
+parser
+    probably gonna rename this to tuber because the I will free up the parser for the command line and because tuber is a funny name
 
 
 

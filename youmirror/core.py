@@ -1,17 +1,17 @@
-import youmirror.parser as parser
-import youmirror.downloader as downloader
-import youmirror.helper as helper
-import youmirror.configurer as configurer
-import youmirror.databaser as databaser
-import youmirror.printer as printer
+import youmirror.downloader as downloader   # Does the downloading
+import youmirror.configurer as configurer   # Manages the config file
+import youmirror.databaser as databaser     # Manages the database
+import youmirror.printer as printer         # Manages printing to the console
+import youmirror.filer as filer             # Manages the filetree
+import youmirror.tuber as tuber             # Manages pytube objects
 import logging              # Logging
 from typing import Union    # For typing
-from pytube import YouTube, Channel, Playlist
+from pytube import YouTube, Channel, Playlist   # Used for lots of stuff
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
-from datetime import datetime
+from datetime import datetime   # For marking dates
 import shutil               # For removing whole directories    
 from copy import deepcopy   # For deep copying dictionaries
-import os
+import os                   # For calculating directory sizes
 
 '''
 This is the core module
@@ -33,14 +33,20 @@ class YouMirror:
         root : str = ".",
         ) -> None:
         self.root = root                                # Root directory
-        self.db: str = databaser.db_file                # Default name for the database file
+        self.db_file: str = databaser.db_file           # Default name for the database file
         self.config_file: str = configurer.config_file  # Default name for the config file
         self.config: dict = None    # This stores the configs from the .toml file
-        self.cache: dict[id: str: Union[Playlist, Channel, YouTube]] = dict() # This is used so we don't have to reinitialize pytube objects we've already made, because initializing them is slow
+        self.cache: dict[str: Union[Playlist, Channel, YouTube]] = dict() # This is used so we don't have to reinitialize pytube objects we've already made, because initializing them is slow
+
+        self.channels_table = dict()    # Keeping our database tables open once we get them
+        self.playlists_table = dict()
+        self.singles_table = dict()
+        self.paths_table = dict()
+        self.files_table = dict()
             
     def new(self, root : str) -> None:
         '''
-        Create a new mirror directory at the given path
+        Create a new mirror the given root directory
         '''
 
         if not root: root = self.root   # If no root is given, use the default directory
@@ -48,18 +54,24 @@ class YouMirror:
         # Get our wrapped up Paths
         path = Path(root)
         config_path = path/Path(self.config_file)
-        db_path = path/Path(self.db)
+        db_path = path/Path(self.db_file)
         
         # Create all the necessary files if they don't exist (path, config, db)
         if not path.is_dir():
-            logging.info(f"Creating new mirror directory \'{path}\'")
-            helper.create_path(path)
+            print(f"Creating new mirror directory \'{path}\'")
+            filer.create_path(path)
+        else:
+            print(f"Mirror directory \'{path}\' already exists")
         if not config_path.is_file():
-            logging.info(f"Creating config file \'{config_path}\'")
+            print(f"Creating config file \'{config_path}\'")
             configurer.new_config(config_path, root)
+        else:
+            print(f"Config file \'{config_path}\' already exists")
         if not db_path.is_file():
-            logging.info(f"Creating database \'{db_path}\'")
-            helper.create_file(db_path)
+            print(f"Creating database \'{db_path}\'")
+            filer.create_file(db_path)
+        else:
+            print(f"Database \'{db_path}\' already exists")
 
     def add(self, url: str, root: str = None, **kwargs) -> None:
         '''
@@ -72,7 +84,7 @@ class YouMirror:
 
         # Config setup
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
-        db_path = path/Path(self.db)                # Get the db file & ensure it exists
+        db_path = path/Path(self.db_file)                # Get the db file & ensure it exists
         if not config_path.is_file():               # Verify the config file exists   
             logging.error(f'Could not find config file in directory \'{path}\'')
             return
@@ -102,54 +114,48 @@ class YouMirror:
 
         # Parse the url & create pytube object
         try:
-            if not(yt_string := parser.link_type(url)):             # Get the url type (channel, playlist, single)
+            if not (yt_string := tuber.link_type(url)):             # Get the url type (channel, playlist, single)
                 print(f"Invalid url \'{url}\'")
                 return
-            if not(id := parser.link_id(url)):                      # Get the id from the url
+            if not (id := tuber.link_id(url)):                      # Get the id from the url
                 print(f'Could not parse id from url \'{url}\'')
                 return
             if configurer.yt_exists(yt_string, id, self.config):    # Check if the link is already in the mirror
                 print(f'url \'{url}\' already exists in the mirror')
                 return
-            if id not in self.cache:            # If the yt object is not already cached
-                yt = parser.get_pytube(url)     # Get the proper pytube object
-                self.cache[id] = yt             # Cache the object
-                if not yt:                      # If the object is invalid
-                    print(f'Could not parse url \'{url}\'')
-                    return
-            else:
-                yt = self.cache[id]                                 # Else, use the cached object
+            if not (yt := self.get_pytube(url, self.cache)):     # Get the proper pytube object                    
+                print(f'Could not parse url \'{url}\'')
+                return
         except Exception as e:
             logging.exception(f"Could not parse url {url} due to {e}")
 
         # Collect the specs
         try:
-            name = parser.get_name(yt)                          # Get the name of the pytube object
+            name = tuber.get_name(yt)  # Get the name of the pytube object
+            url = tuber.get_url(yt)    # We need to get the url from pytube object in case someone passes a dirty url (like a video from a playlist)                        
             last_updated = datetime.now().strftime('%Y-%m-%d')  # Mark today's date as the last updated
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
         specs = {"name": name, "url": url, "last_updated": last_updated, "resolution" :active_options["resolution"]}
 
         # Add the id to the config
-        yt_string = parser.yt_to_type_string(yt)    # Get the yt type string
+        yt_string = tuber.yt_to_type_string(yt)    # Get the yt type string
         print(f"Adding {url} to the mirror")
         logging.info(f"Adding {url} to the mirror")
         self.config[yt_string][id] = specs          # TODO doing it directly for now, but we should go through the configurer
-        # configurer.add_yt(yt_string, id, self.config, specs)       # Add the url to the config # TODO TODO TODO
+        # configurer.add_yt(yt_string, id, self.config, specs)  # Add the url to the config # TODO TODO TODO
         to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add       
-        to_add.append(yt)                                            # Mark it for adding
+        to_add.append(yt)                                       # Mark it for adding
 
         paths_table = databaser.get_table(db_path, "paths") # Need this to resolve collisions (only checking paths)
 
         # Add the items to the database
-
-
         to_download: list[YouTube] = []         # List of items to download
         paths_to_add = dict()                   # Local dict of paths before we commit to db
         singles_to_add = dict()                 # Local dict of singles to add before committing to db
         files_to_add = dict()                   # Local dict of files before we commit to db
         for item in to_add:                     # Search through all the pytube objects we want to add
-            keys = parser.get_keys(item, dict(), active_options, paths_table)    # Get all the keys to add to the table
+            keys = tuber.get_keys(item, dict(), active_options, paths_table)    # Get all the keys to add to the table
             print(f'Adding {yt_string} \'{keys["name"]}\'')
             logging.debug(f"Adding {keys} to the database")
 
@@ -168,15 +174,15 @@ class YouMirror:
             if "children" in keys:                              # If any children appeared when we got keys
                 print(f'Found {len(keys["children"])} Youtube videos')
 
-                for child in parser.get_children(item):   # We have to get the children again to get urls instead of ids :/
+                for child in tuber.get_children(item):   # We have to get the children again to get urls instead of ids :/
 
                     inject_keys = {"parent_id": id, "parent_name": 
                     keys["name"], "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
-                    child = parser.get_pytube(child)    # Wrap those children in pytube objects
+                    child = self.get_pytube(child, self.cache)    # Wrap those children in pytube objects
                     to_download.append(child)           # Mark this YouTube object for downloading
-                    child_id = parser.get_id(child)     # Get the id for the single
+                    child_id = tuber.get_id(child)     # Get the id for the single
 
-                    child_keys = parser.get_keys(child, inject_keys, active_options, paths_table) # Get the rest of the keys from the pytube object
+                    child_keys = tuber.get_keys(child, inject_keys, active_options, paths_table) # Get the rest of the keys from the pytube object
 
                     singles_to_add[child_id] = child_keys                           # Mark the single to be added
                     print(f'Adding \'{child_keys["name"]}\'')
@@ -197,7 +203,7 @@ class YouMirror:
         download_size: int = 0
         if not kwargs.get("no_dl", False):
             for item in to_download:
-                single =  singles_to_add[parser.get_id(item)]  # Get the keys for the single
+                single =  singles_to_add[tuber.get_id(item)]  # Get the keys for the single
                 for filename in single["files"]:        # Get the filenames
                     file_type = files_to_add[filename]["type"] # Get the file type "video", "audio", "caption"
                     print(f"Calculating filesize for {file_type} {str(Path(filename).name)}")
@@ -246,7 +252,7 @@ class YouMirror:
 
         # Download all the files                                 
         for item in to_download:            # Search through all the pytube objects we want to download
-            id = parser.get_id(item)        # Get the id
+            id = tuber.get_id(item)        # Get the id
             files = singles_table[id]["files"]  # Get the files from the database
             for f in files:                  # Search through all the files
                 data = files_table[f]              # Get the data for this file
@@ -257,6 +263,9 @@ class YouMirror:
                     filepath = str(path/Path(f)) # Inject the root that was passed from the add() function call
                     if downloader.download_single(item, file_type, filepath, active_options): # Download it
                         files_table[f]["downloaded"] = True # If successful mark it as downloaded
+        
+        # if not kwargs.get("no_dl", False):
+            # self.sync(root=root, url=url)   # Sync all the files for this url instead of doing it in this func TODO TODO TODO
 
         print("Done!")
 
@@ -271,7 +280,7 @@ class YouMirror:
         print("Setting up config")
         path = Path(root)
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
-        db_path = path/Path(self.db)                # Get the db file & ensure it exists
+        db_path = path/Path(self.db_file)                # Get the db file & ensure it exists
 
         print("Loading config")
         if not config_path.is_file():                           # Verify the config file exists   
@@ -284,14 +293,12 @@ class YouMirror:
         
         print("Getting pytube object")
         # Parse the url & create pytube object
-        if not (yt_string := parser.link_type(url)):   # Get the url type (channel, playlist, single)
-            logging.error(f'Invalid url \'{url}\'')
-            return
-        id = parser.link_id(url)                # Get the id from the link
-        if id not in self.cache:
-            yt = parser.get_pytube(url)         # Get the proper pytube object
-        else:
-            yt = self.cache[id]                 # Get the cached pytube object
+        try:
+            yt_string = tuber.link_type(url)     # Get the url type (channel, playlist, single)
+            id = tuber.link_id(url)                         # Get the id from the link
+            yt = self.get_pytube(url, self.cache)          # Get the proper pytube object
+        except Exception as e:
+            logging.exception('Could not get info for url \'%s\' due to e', url, e)
 
         print("Getting checking for url")
         # Check if the id is already in the config
@@ -304,7 +311,7 @@ class YouMirror:
             return
 
         print("Getting db info for url")
-        yt_string = parser.link_type(url)   # Get the type of youtube object "channel", "playlist", "single"
+        yt_string = tuber.link_type(url)   # Get the type of youtube object "channel", "playlist", "single"
         table = databaser.get_table(db_path, yt_string, autocommit=False)  # Get the appropriate database
         keys = table[id]                    # Get the keys for the object
 
@@ -379,13 +386,13 @@ class YouMirror:
         table.commit()
 
         # Update config file
-        del self.config[yt_string][id]  # TODO doing it directly for now, but we should go through the configurer
+        del self.config[yt_string][id]  # TODO doing it directly for now, 
+        # but we should go through the configurer
         configurer.save_config(config_path, self.config)
-
-    
-    def sync(self, root: str = None, **kwargs: dict) -> None:
+        
+    def sync(self, root: str = None, url: str = None, **kwargs: dict) -> None:
         '''
-        Syncs the mirror against the config file
+        Syncs the mirror against the database
         '''
 
         if not root:
@@ -394,16 +401,21 @@ class YouMirror:
         # if not kwargs.get("update"):   # Update if specified
         # self.update(root)
 
+        # if url: # If a url is specified, just sync that
+        #     print(f"Synced with \'{url}\'!")
+        #     return url
+
+
         # Config setup
         path = Path(root)
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
-        db_path = path/Path(self.db)                # Get the db file & ensure it exists
+        db_path = path/Path(self.db_file)                # Get the db file & ensure it exists
 
         if not config_path.is_file():                           # Verify the config file exists   
-            logging.error(f'Could not find config file in root directory \'{path}\'')
+            logging.error('Could not find config file in root directory \'%s\'', path)
             return
         if not db_path.is_file():                               # Verify the database file exists
-            logging.error(f'Could not find database file in root directory \'{path}\'')
+            logging.error('Could not find database file in root directory \'%s\'', path)
             return
         self.config = configurer.load_config(config_path)       # Load the config file
         active_options = configurer.defaults                                # Load default options
@@ -444,7 +456,7 @@ class YouMirror:
                 if id not in self.cache:
                     url = singles_table[id]["url"]      # Get the url for the id in the database
                     if id not in self.cache:                # Check if the cache has the yt object
-                        yt = parser.get_pytube(url)         # Get the yt object
+                        yt = self.get_pytube(url, self.cache)         # Get the yt object
                         self.cache.update({id: yt})         # Add the id and the yt object to the cache
                     else:
                         yt = self.cache[id]             # Otherwise grab the yt object from the cache
@@ -475,7 +487,7 @@ class YouMirror:
         # Config setup
         path = Path(root)
         config_path = path/Path(self.config_file)   # Get the config file & ensure it exists
-        db_path = path/Path(self.db)                # Get the db file & ensure it exists
+        db_path = path/Path(self.db_file)                # Get the db file & ensure it exists
 
         if not config_path.is_file():                           # Verify the config file exists   
             logging.error(f'Could not find config file in root directory \'{path}\'')
@@ -497,8 +509,8 @@ class YouMirror:
             print("id ==", id)
             url = channel["url"]    # Get the url
             print("url ==" ,url)
-            yt = parser.get_pytube(url)  # Get the pytube object
-            children = parser.get_children(yt)      # Get children urls
+            yt = self.get_pytube(url, self.cache)  # Get the pytube object
+            children = tuber.get_children(yt)      # Get children urls
             db_channel = channels_table[id] # Get the channel from the db
             db_children = db_channel["children"]    # Get the children in the database
             print(len(children) == len(db_children)) # Determine whether there are new videos
@@ -510,13 +522,11 @@ class YouMirror:
         to_download: set[YouTube] = set()
         return to_download  
 
-    def verify(
-        self
-        ) -> None:
+    def verify(self) -> None:
         '''
         Verifies the integrity of the mirror (somehow)
         '''
-        pass
+        return
 
     def show(self, root: str) -> None:
         '''
@@ -537,8 +547,8 @@ class YouMirror:
         channel = self.config['channel']
         playlist = self.config['playlist']
         single = self.config["single"]
-        print(f'TYPE --- NAME --- URL')
-        print(f'-'* 30)
+        print('TYPE --- NAME --- URL')
+        print('-'* 30)
 
         for yt in channel:
             item = channel[yt]
@@ -564,4 +574,34 @@ class YouMirror:
         TODO will add internetarchive as an optional dependency later on
         if/when this gets implemented
         '''
-        pass
+        return
+
+    def _add_yt(self, url: str) -> None:
+        '''
+        Adds the url and its info to the database
+        '''
+        return
+
+    def _remove_yt(self, url: str) -> None:
+        '''
+        Removes a url and its info from the database
+        '''
+        return
+
+    def get_pytube(self, url: str, cache: dict) -> None:
+        '''
+        Returns a new pytube object or one from the cache
+        '''
+        try:
+            if url in cache:        # If the url is already cached, return its object
+                return cache[url]
+            else:
+                pytube = tuber.new_pytube(url)  # Get new pytube object
+                cache[url] = pytube             # Cache it
+        except Exception as e:
+            logging.exception('Could not get pytube object for %s due to', url, e)
+
+    def get_keys():
+        '''
+        Gets the keys for the url before adding to the database
+        '''
