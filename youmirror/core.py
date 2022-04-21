@@ -126,8 +126,7 @@ class YouMirror:
             last_updated = datetime.now().strftime('%Y-%m-%d')     # Get the date of the pytube object
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
-        specs = {"name": name, "url": url, "last_updated": last_updated}
-        if "resolution" in kwargs: specs.update({})   # Add resolution to configs if specified # TODO actually add it
+        specs = {"name": name, "url": url, "last_updated": last_updated, "resolution" :active_options["resolution"]}
 
         # Add the id to the config
         to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add
@@ -379,11 +378,7 @@ class YouMirror:
         configurer.save_config(config_path, self.config)
 
     
-    def sync(
-        self,
-        root: str = None,
-        **kwargs: dict,
-        ) -> None:
+    def sync(self, root: str = None, **kwargs: dict) -> None:
         '''
         Syncs the mirror against the config file
         '''
@@ -391,7 +386,7 @@ class YouMirror:
         if not root:
             root = self.root
 
-        # if not kwargs.get("no_update"):   # Unless we are skipping the update, update database
+        # if not kwargs.get("update"):   # Update if specified
         # self.update(root)
 
         # Config setup
@@ -437,7 +432,7 @@ class YouMirror:
             print("Downloading videos...")   
             for filepath in files_to_download:          # Search through all the pytube objects we want to download
                 filename = str(Path(filepath).name)
-                print("Downloading ", filename)
+                # print("Downloading ", filename)
                 file = files_to_download[filepath]      # Get keys for the filepath
                 logging.debug(f'Keys for file {filename} are {file}')
                 id = file["parent"]                     # Get the id for the parent
@@ -453,10 +448,10 @@ class YouMirror:
                     active_options["caption_type"] = file["caption_type"] # Set the caption type
                 if not Path(filepath).exists():     # If the file doesn't exist
                     filepath = str(path/Path(filepath)) # Inject the root that was passed from the add() function call
-            #         if downloader.download_single(item, file_type, filepath, active_options): # Download it
-            #             file["downloaded"] = True # If successful mark it as downloaded
-            #             files_table[filepath] = file # update the files table
-            #             files_table.commit()
+                    if downloader.download_single(yt, file_type, filepath, active_options): # Download it
+                        file["downloaded"] = True # If successful mark it as downloaded
+                        files_table[filepath] = file # update the files table
+                        files_table.commit()
 
 
         print("All done!")

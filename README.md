@@ -34,7 +34,7 @@ You can view the current state of your mirror with the `show` command
 
 `youmirror show [folder]`
 
-youmirror also offers a `sync` command to update your mirror if you have say a playlist that you added more videos to or if an `add` command got stopped short and you want to make sure the files got downloaded
+youmirror also offers a `sync` command so you can download all the undownloaded videos if your download gets interrupted, or if you don't want to download everything at once. In the future you will be able to do `--update` and check for new videos before syncing
 
 `youmirror sync [folder]`
 
