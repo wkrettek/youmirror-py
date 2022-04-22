@@ -125,7 +125,7 @@ def verify_installation(filepath: Path) -> bool:
 def get_files(path: str, yt_name: str, options: dict) -> dict:
     '''
     Returns a dict of filenames we want to download
-    files = {filepath: {type: file_type, caption_type: caption_type}, filepath: {type: file_type, caption_type: caption_type}}
+    files = {filepath: {type: file_type, language: language}, filepath: {type: file_type, language: language}}
     '''
     to_download = { # Returns true/false if we want to download the video
         "video": options["dl_video"], 
@@ -137,13 +137,13 @@ def get_files(path: str, yt_name: str, options: dict) -> dict:
     for file_type in to_download:
         if to_download[file_type]:   # Check the boolean value matching the file_type
             if file_type == "caption":
-                for caption_type in options["captions"]:    # We can download multiple caption types
-                    filename = calculate_filename(file_type, f'{yt_name}_{caption_type}')    # Add f'_{caption_type}'
-                    filepath = str(Path(path)/filename)        # TODO THIS IS OVERKILL I WILL SIMPLIFY LATER
-                    files[filepath] = {"type": file_type, "caption_type": caption_type}  # Add to files               
+                for language in options["captions"]:    # We can download multiple caption types
+                    filename = calculate_filename(file_type, f'{yt_name}_{language}')    # Add f'_{caption_type}'
+                    filepath = str(Path(path)/filename)
+                    files[filepath] = {"type": file_type, "language": language}  # Add to files               
             else:
                 filename = calculate_filename(file_type, yt_name)    # Calculate the filename
-                filepath = str(Path(path)/filename)                              # TODO THIS IS OVERKILL I WILL SIMPLIFY LATER
+                filepath = str(Path(path)/filename)
                 files[filepath] = {"type": file_type}                            # Add to files
 
     return files

@@ -152,60 +152,72 @@ class YouMirror:
         logging.info(f"Adding {url} to the mirror")
         self.config[yt_string][id] = specs          # TODO doing it directly for now, but we should go through the configurer
         # configurer.add_yt(yt_string, id, self.config, specs)  # Add the url to the config # TODO TODO TODO
-        to_add: list[Union[Channel, Playlist, YouTube]] = []    # Create list of items to add       
-        to_add.append(yt)                                       # Mark it for adding
 
         paths_table = databaser.get_table(db_path, "paths") # Need this to resolve collisions (only checking paths)
 
-        # Add the items to the database
-        to_download: list[YouTube] = []         # List of items to download
-        paths_to_add = dict()                   # Local dict of paths before we commit to db
-        singles_to_add = dict()                 # Local dict of singles to add before committing to db
-        files_to_add = dict()                   # Local dict of files before we commit to db
-        for item in to_add:                     # Search through all the pytube objects we want to add
-            keys = self.get_keys(item, dict(), active_options, paths_table)    # Get all the keys to add to the table
-            print(f'Adding {yt_string} \'{keys["name"]}\'')
-            logging.debug(f"Adding {keys} to the database")
+        # Local dicts before committing to db
+        url_to_add = dict()                     # Wildcard url, could be channel, playlist or single 
+        singles_to_add = dict()                 # Singles
+        paths_to_add = dict()                   # Paths
+        files_to_add = dict()                   # Files
 
-            paths_to_add.update({keys["path"]: {"parent": url}})        # Add the path to the paths dict
-            if "files" in keys:             # This means we passed a single
-                to_download.append(item)    # Mark it for downloading
-                singles_to_add[url] = keys      # Add the single to be added later  
-                files = deepcopy(keys["files"])  # Copy the files dict
-                for filepath in files:  # Add some extra info we only want in the files table
-                    file = files[filepath] 
-                    file["parent"] = id
-                    file["downloaded"] = False
-                    files_to_add[filepath] = file # Add the files to the local dict
+        # Generate keys for the db
+        keys = self.get_keys(yt, dict(), active_options, paths_table)    # Get all the keys to add to the table
+        url_to_add[url] = keys                                           # Mark the url for adding
+        paths_to_add.update({keys["path"]: {"parent": url}})             # Mark the path for adding
 
-            # Handle children
-            if "children" in keys:                              # If any children appeared when we got keys
-                print(f'Found {len(keys["children"])} Youtube videos')
+        # print(f'Adding {yt_string} \'{keys["name"]}\'')
+        # logging.debug(f"Adding {keys} to the database")
 
-                for child in tuber.get_children(item):   # We have to get the children again to get urls instead of ids :/
+        if (children := tuber.get_children(url)):   # If the passed url has any children
 
-                    inject_keys = {"parent_id": id, "parent_name": 
-                    keys["name"], "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
-                    child = self.get_pytube(child, self.cache)    # Wrap those children in pytube objects
-                    to_download.append(child)           # Mark this YouTube object for downloading
-                    child_url = tuber.get_url(child)
+            print(f'Found {len(keys["children"])} Youtube videos')
+            for child_url in children:          # For every url
 
-                    child_keys = self.get_keys(child, inject_keys, active_options, paths_table) # Get the rest of the keys from the pytube object
+                yt = self.get_pytube(url)       # Get the pytube object
+                child_keys = self.get_keys()    # Get the keys for the db
+                singles_to_add[url] = child_keys    # Mark it for adding
 
-                    singles_to_add[child_url] = child_keys                           # Mark the single to be added
-                    print(f'Adding \'{child_keys["name"]}\'')
-                    logging.debug(f"Adding {child_keys} to the database")
+                files = deepcopy(child_keys["files"])   # Make a copy of the files
+                files = self.init_files(files)          # Put some initial values
+                files_to_add.update(files)              # Mark the files for adding
 
-                    paths_to_add.update({child_keys["path"]: {"parent": child_url}}) # Mark the path to be added
-                    logging.debug(f'Adding path {child_keys["path"]} with id {child_url}')
+                new_path = deepcopy(child_keys["path"])     # Make a copy of the path
+                new_path = self.init_path(new_path)         # Put some initial values
+                paths_to_add.update(new_path)               # Mark it for adding
 
-                    files = deepcopy(child_keys["files"])    # Copy the files dict
-                    for filepath in files:    # Add some extra info we only want in the files table
-                        file = files[filepath]
-                        file["parent"] = child_url
-                        file["downloaded"] = False
-                        logging.debug((f'Adding file {filepath} with keys {file}'))
-                        files_to_add[filepath] = file   # Add the files to the local dict   
+
+        if "files" in keys:             # This means we passed a single
+            singles_to_add[url] = keys      # Add the single to be added later  
+            files = deepcopy(keys["files"])  # Copy the files dict
+            for filepath in files:  # Add some extra info we only want in the files table
+                file = files[filepath] 
+                file["parent"] = id
+                file["downloaded"] = False
+                files_to_add[filepath] = file # Add the files to the local dict
+
+        # Handle children
+        if "children" in keys:                              # If any children appeared when we got keys
+            print(f'Found {len(keys["children"])} Youtube videos')
+
+            for child in tuber.get_children(item):   # We have to get the children again to get urls instead of ids :/
+
+                inject_keys = {"parent_id": id, "parent_name": 
+                keys["name"], "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
+                child = self.get_pytube(child, self.cache)    # Wrap those children in pytube objects
+                child_url = tuber.get_url(child)
+
+                child_keys = self.get_keys(child, inject_keys, active_options, paths_table) # Get the rest of the keys from the pytube object
+
+                singles_to_add[child_url] = child_keys                           # Mark the single to be added
+                print(f'Adding \'{child_keys["name"]}\'')
+                logging.debug(f"Adding {child_keys} to the database")
+
+                paths_to_add.update({child_keys["path"]: {"parent": child_url}}) # Mark the path to be added
+                logging.debug(f'Adding path {child_keys["path"]} with id {child_url}')
+
+                files = deepcopy(child_keys["files"])    # Copy the files dict
+  
 
         # # Calculate download size
         # download_size: int = 0
@@ -640,3 +652,22 @@ class YouMirror:
         else: 
             logging.error(f"Failed to get keys for {yt_string} {yt}")
             return None
+
+    def init_files(files: dict, url: str, options: dict) -> dict:
+        '''
+        Takes some files and fills in some default values
+        '''
+
+        for filepath in files:    # Add some extra info we only want in the files table
+            file = files[filepath]
+            # file["parent"] = child_url
+            file["downloaded"] = False
+            logging.debug((f'Adding file {filepath} with keys {file}'))
+
+        # for filepath in files:    # Add some extra info we only want in the files table
+        #     file = files[filepath]
+        #     file["parent"] = child_url
+        #     file["downloaded"] = False
+        #     logging.debug((f'Adding file {filepath} with keys {file}'))
+        #     files_to_add[filepath] = file   # Add the files to the local dict 
+

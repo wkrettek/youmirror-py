@@ -129,9 +129,12 @@ def get_children(yt: Union[Channel, Playlist]) -> list[str]:
     Takes either a Channel or Playlist object and returns its video links as a list of strings
     '''
     try:
-        logging.debug(f"Getting children for {get_name(yt)}")
-        children = [url for url in yt.video_urls]   # Maybe we can async get this in the future?
-        return children
+        if type(yt) in [Channel, Playlist]:
+            logging.debug(f"Getting children for {get_name(yt)}")
+            children = [url for url in yt.video_urls]   # Maybe we can async get this in the future?
+            return children
+        else:
+            return None
     except Exception as e:
         logging.exception(f"Failed to get children for {get_name(yt)} due to {e}")
         return None
