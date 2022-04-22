@@ -12,7 +12,7 @@ def main():
 
 @app.command()
 def sync(
-    url : str = None,
+    url : str = typer.Argument(None, help="Specify the url to sync"),
     root : str = typer.Argument('.', help="The root directory to sync to, default=\'./\'"),
     # dry_run : Optional[bool] = typer.Option(default=False, show_choices=False, help="Calculates changes with no execution"),
     # update :Optional[bool] = typer.Option(False, "--update", help="Updates the mirror before syncing"),
@@ -21,7 +21,7 @@ def sync(
     Checks for new videos and downloads them
     '''
     ym = YouMirror(root=root)
-    ym.sync()
+    ym.sync(url=url)
     return
 
 @app.command()

@@ -55,7 +55,7 @@ from pathlib import Path
 db_file = "youmirror.db"
 valid_tables = {"channel", "playlist", "single", "paths", "files"}
 
-def get_table(path: Path, table: str, autocommit=True) -> SqliteDict:
+def open_table(path: Path, table: str, autocommit=True) -> SqliteDict:
     '''
     Returns a table from the database that matches the string
     '''

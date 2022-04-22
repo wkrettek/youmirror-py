@@ -51,7 +51,7 @@ def get_metadata(yt: Union[Channel, Playlist, YouTube]) -> dict:
     '''
     meta = dict()
     meta["name"] = get_name(yt)             # Get the name
-    meta["id"] = get_id(yt)
+    meta["id"] = get_id(yt)                 # Extract the id from the url
     if type(yt) in [Channel, Playlist]:     # Check if we have a channel or playlist
         children = get_children(yt)         # This will use pytube to get video_urls
         meta["children"] = children         # Add the children urls to the metadata

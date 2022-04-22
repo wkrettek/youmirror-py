@@ -39,21 +39,8 @@ class YouMirror:
         self.config_file: str = configurer.config_file              # Default name for the config file
         self.db_path: Path = self.path/Path(self.db_file)           # Full path for db file
         self.config_path: Path = self.path/Path(self.config_file)   # Full path for config file
-        self.config: dict = None                                    # configs from file
+        self.config: dict = dict()                                    # configs from file
         self.cache: dict[str: Union[Playlist, Channel, YouTube]] = dict() # This is used so we don't have to reinitialize pytube objects we've already made, because initializing them is slow
-
-        self.tables = {
-            "channel": None,
-            "playlist": None,
-            "single": None,
-            "files": None,
-            "paths": None
-        }
-        self.channels_table = dict()    # Keeping our database tables open once we get them
-        self.playlists_table = dict()
-        self.singles_table = dict()
-        self.paths_table = dict()
-        self.files_table = dict()
             
     def new(self) -> None:
         '''
@@ -153,7 +140,7 @@ class YouMirror:
         self.config[yt_string][id] = specs          # TODO doing it directly for now, but we should go through the configurer
         # configurer.add_yt(yt_string, id, self.config, specs)  # Add the url to the config # TODO TODO TODO
 
-        paths_table = databaser.get_table(db_path, "paths") # Need this to resolve collisions (only checking paths)
+        paths_table = databaser.open_table(db_path, "paths") # Need this to resolve collisions (only checking paths)
 
         # Local dicts before committing to db
         url_to_add = dict()                     # Wildcard url, could be channel, playlist or single 
@@ -199,12 +186,6 @@ class YouMirror:
                 paths_to_add.update({ new_path: {"parent": child_url} })    # Mark it for adding
                 # logging.info(f"Adding path {new_path}")
 
-        # print(f'Url to add: {url_to_add}')
-        # print(f'Singles to add: {singles_to_add}')
-        # print(f'Paths to add: {paths_to_add}')
-        # print(f'Files to add: {files_to_add}')
-
-
         # Calculate download size
         download_size: int = 0
         if not kwargs.get("no_dl", False):
@@ -235,20 +216,20 @@ class YouMirror:
 
         # Open the database tables
         if yt_string in ['channel', 'playlist']:            # If it's a channel or playlist
-            table = databaser.get_table(db_path, yt_string) # Get the appropriate database for the toplevel item
+            table = databaser.open_table(db_path, yt_string) # Get the appropriate database for the toplevel item
             table[url] = keys                                # Add it to the database
             table.commit()                                  # Commit the changes to the database
         else:
             singles_to_add[url] = keys  # Else, add it to the singles pile
-        singles_table = databaser.get_table(db_path, "single")  # Where yt videos go
-        files_table = databaser.get_table(db_path, "files")  # Where files go
+        singles_table = databaser.open_table(db_path, "single")  # Where yt videos go
+        files_table = databaser.open_table(db_path, "files")  # Where files go
         # Commit to database
         files_table.update(files_to_add)       # Record the files in the database
         paths_table.update(paths_to_add)       # Record the paths in the database
         singles_table.update(singles_to_add)   # Record all the singles
-        files_table.commit()            # Commit the changes to the database
-        paths_table.commit()            # Commit the changes to the database
-        singles_table.commit()          # Commit the changes to the database
+        files_table.close()            # Commit the changes to the database
+        paths_table.close()            # Commit the changes to the database
+        singles_table.close()          # Commit the changes to the database
 
         # Check if downloading is skipped
         if kwargs.get("no_dl", False):
@@ -256,23 +237,9 @@ class YouMirror:
             return
 
         # print("Downloading...")
-
-        # # Download all the files                                 
-        # for item in to_download:            # Search through all the pytube objects we want to download
-        #     id = tuber.get_id(item)        # Get the id
-        #     files = singles_table[id]["files"]  # Get the files from the database
-        #     for f in files:                  # Search through all the files
-        #         data = files_table[f]              # Get the data for this file
-        #         file_type = data["type"]           # Get the file type 
-        #         if file_type == "caption":          # If it's a caption, use options to set the caption language
-        #             active_options["caption_type"] = data["caption_type"] # Set the caption type
-        #         if not Path(f).exists():     # If the file doesn't exist
-        #             filepath = str(path/Path(f)) # Inject the root that was passed from the add() function call
-        #             if downloader.download_single(item, file_type, filepath, active_options): # Download it
-        #                 files_table[f]["downloaded"] = True # If successful mark it as downloaded
         
-        # if not kwargs.get("no_dl", False):
-            # self.sync(root=root, url=url)   # Sync all the files for this url instead of doing it in this func TODO TODO TODO
+        if not kwargs.get("no_dl", False):
+            self.sync(url=url, kwargs=kwargs)   # Sync all the files for this url
 
         print("Done!")
 
@@ -318,7 +285,7 @@ class YouMirror:
 
         print("Getting db info for url")
         yt_string = tuber.link_type(url)   # Get the type of youtube object "channel", "playlist", "single"
-        table = databaser.get_table(db_path, yt_string, autocommit=False)  # Get the appropriate database
+        table = self.get_table(yt_string, autocommit=False)  # Get the appropriate database
         keys = table[id]                    # Get the keys for the object
 
         if not kwargs.get("no_rm", False):
@@ -359,7 +326,7 @@ class YouMirror:
 
         print("Getting files to remove")
         files_to_remove = set()
-        if not (singles_table := databaser.get_table(db_path, "single")):   # Get the singles table if not already initialized
+        if not (singles_table := self.get_table("single")):   # Get the singles table if not already initialized
             singles_table = table
         for single in singles_to_remove:
             path = singles_table[single]["path"]
@@ -375,8 +342,8 @@ class YouMirror:
 
         print("Saving changes...")
         # Open databases
-        files_table = databaser.get_table(db_path, "files", autocommit=False) # Get the files table
-        paths_table = databaser.get_table(db_path, "paths", autocommit=False) # Get the paths table        
+        files_table = self.get_table("files", autocommit=False) # Get the files table
+        paths_table = self.get_table("paths", autocommit=False) # Get the paths table        
 
         # Commit the changes to the database
         for path in paths_to_remove:        # Remove the paths from the database
@@ -406,94 +373,82 @@ class YouMirror:
         config_path = self.config_path
         db_path = self.db_path
 
-        if kwargs.get("update"):   # Update if specified
-            self.update()
+        # Config setup
+        if not config_path.is_file():               # Verify the config file exists   
+            logging.error(f'Could not find config file in directory \'{path}\'')
+            return
+        if not db_path.is_file():                   # Verify the database file exists
+            logging.error(f'Could not find database file in directory \'{path}\'')
+            return
 
-        files_table = databaser.get_table(db_path, "files", autocommit=False) # Get the files table
-        singles_table = databaser.get_table(db_path, "single", autocommit=False) # Get the singles table   
+        # Load the config
+        try:
+            self.config = configurer.load_config(config_path)
+        except Exception as e:
+            logging.exception(f"Could not load given config file due to {e}")
+            return
+
+        if kwargs.get("update"):   # Update if specified
+            self.update(url=url)
+
+        active_options = configurer.defaults                                # Load default options
+        global_options = configurer.get_options("youmirror", self.config)   # Get global options
+        active_options.update(global_options)                               # Overwrite with globals
+        active_options.update(kwargs)                                       # Overwrite with command line options
+
+        files_table = databaser.open_table(db_path, "files") # Get the files table
+        singles_table = databaser.open_table(db_path, "single") # Get the singles table 
+
         if url:                                         # If a url is specified, just sync that
-            files_to_sync = dict()
-            yt_string = tuber.link_type(url)
+            name = tuber.get_name(self.get_pytube(url, self.cache)) # Get name for pretty printing
+            files_to_sync = dict()  
+            yt_string = tuber.link_type(url)            # Get the type of link
+            print(f"Syncing with {yt_string} {name}")
 
             if yt_string in ['channel', 'playlist']:
-                table = databaser.get_table(db_path, yt_string, autocommit=False)
-                children = table[url]["children"]
-                for child in children:
-                    files = deepcopy
-                    files_to_sync[child] = dict()
+                table = databaser.open_table(db_path, yt_string)   # Open a table
+                children = table[url]["children"]                  # Get the children from the db
+                for child_url in children:
+                    files = singles_table[child_url]["files"]      # Get the children files
+                    for filepath in files:                  # Get the files from the files table
+                        info = files_table[filepath]        # File dictionary
+                        files_to_sync[filepath] = info      # Mark for syncing
 
             elif yt_string == 'single':
-                to_sync = [url]
+                    files = singles_table[url]["files"]     # Get the files from the db
+                    for filepath in files:                  # Get the files from the files table
+                        info = files_table[filepath]        # File dictionary
+                        files_to_sync[filepath] = info      # Mark for syncing
 
-            else:
-                raise Exception(f'Unknown url type {yt_string}')
-
-
-
-            print(f"Synced with \'{url}\'!")
+            print(f'Syncing {len(files_to_sync)} files')
+            for filepath in files_to_sync:
+                file = files_to_sync[filepath]              # Get the file info
+                if not file["downloaded"]:
+                    parent = file["parent"]                     # Get the parent url
+                    file_type = file["type"]                    # Get the file type "video", "audio", etc. 
+                    yt = self.get_pytube(parent, self.cache)    # Get the pytube object   
+                    print(f"Downloading {file_type} {str(Path(filepath).name)}")
+                    if (specs := downloader.download_single(yt, file_type, filepath, active_options)):
+                        print(f"Downloaded {file_type} {str(Path(filepath).name)}")
+                        files_table[filepath].update(specs)     # Save the file specs to the database
+                        files_table.commit()                    # Commit the changes to the database
+                
+            print(f"Synced with \'{name}\'!")
             return url
 
-        if not config_path.is_file():                           # Verify the config file exists   
-            logging.error('Could not find config file in root directory \'%s\'', path)
-            return
-        if not db_path.is_file():                               # Verify the database file exists
-            logging.error('Could not find database file in root directory \'%s\'', path)
-            return
-        self.config = configurer.load_config(config_path)       # Load the config file
-        active_options = configurer.defaults                                # Load default options
-        global_options = configurer.get_options("youmirror", self.config)   # Get global options from config
-        active_options.update(global_options)                               # Overwrite with globals
-        # active_options.update(kwargs)                                       # Overwrite with command line options
-        active_options["has_ffmpeg"] = shutil.which("ffmpeg") is not None   # Record whether they have ffmpeg
+        # If no url is specified, sync everything
+        urls_to_sync = set()
 
-        to_download = list()    # Make a list of videos to download
-
-        channels = self.config["channel"]   # Get all the channels
-        playlists = self.config["playlist"] # Get all the playlists
-        singles = self.config["single"]     # Get all the singles
-
-        files_to_download = dict()
-        files_table = databaser.get_table(db_path, "files", autocommit=True)
-        for filepath in files_table:                            # Search through the files table and find undownloaded files
-            file = files_table[filepath]                        # Get the file keys
-            downloaded = file["downloaded"]                     # Record if downloaded
-            # print("Checking file with keys ", file)
-            if not downloaded:                                  # If not downloaded, mark it for downloading
-                files_to_download[filepath] = file
-                # filename = Path(filepath).name  # Get the filename for pretty printing
-                # print(f"marking {filename} for download")
-
-        print(f'Found {len(files_to_download)} files to download')
-        
-        # Download all the files
-        singles_table = databaser.get_table(db_path, "single")    
-        if len(files_to_download) > 0:
-            print("Downloading videos...")   
-            for filepath in files_to_download:          # Search through all the pytube objects we want to download
-                filename = str(Path(filepath).name)
-                # print("Downloading ", filename)
-                file = files_to_download[filepath]      # Get keys for the filepath
-                logging.debug(f'Keys for file {filename} are {file}')
-                id = file["parent"]                     # Get the id for the parent
-                if id not in self.cache:
-                    url = singles_table[id]["url"]      # Get the url for the id in the database
-                    if id not in self.cache:                # Check if the cache has the yt object
-                        yt = self.get_pytube(url, self.cache)         # Get the yt object
-                        self.cache.update({id: yt})         # Add the id and the yt object to the cache
-                    else:
-                        yt = self.cache[id]             # Otherwise grab the yt object from the cache
-                file_type = file["type"]        # Get the file type 
-                if file_type == "caption":      # If it's a caption, use options to set the caption language
-                    active_options["caption_type"] = file["caption_type"] # Set the caption type
-                if not Path(filepath).exists():     # If the file doesn't exist
-                    filepath = str(path/Path(filepath)) # Inject the root that was passed from the add() function call
-                    if downloader.download_single(yt, file_type, filepath, active_options): # Download it
-                        file["downloaded"] = True # If successful mark it as downloaded
-                        files_table[filepath] = file # update the files table
-                        files_table.commit()
-
+        for yt_string in ['channel', 'playlist', 'single']:
+            items = configurer.get_options(yt_string, self.config)
+            for id in items:
+                print(items[id]["url"])
+                # urls_to_sync.add(item["url"])
+            
+        # print(urls_to_sync)
 
         print("All done!")
+        return
 
 
     def update(
@@ -522,8 +477,8 @@ class YouMirror:
         channels = configurer.get_options("channel", self.config)   # Load channels
         playlists = configurer.get_options("playlist", self.config)   # Load channels
 
-        channels_table = databaser.get_table(db_path, "channel")   # Load channels table
-        playlists_table = databaser.get_table(db_path, "playlist") # Load playlists table
+        channels_table = self.get_table("channel")   # Load channels table
+        playlists_table = self.get_table("playlist") # Load playlists table
 
         # For each item in channels
         for id in channels:
@@ -682,4 +637,5 @@ class YouMirror:
             file = files[filepath]
             size += file["size"]
         return size
+        
 

@@ -132,3 +132,8 @@ poetry.lock
 # youmirror files
 youmirror.db
 youmirror.toml
+
+# media files
+*.mp4
+*.jpg
+*.srt

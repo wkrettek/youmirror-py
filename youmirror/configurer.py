@@ -13,6 +13,7 @@ import toml
 import logging
 from datetime import datetime
 from pathlib import Path
+from copy import deepcopy
 
 defaults = {                # These are the default global configs if not specified
     "dry_run": False,       # Dry run means don't download automatically
@@ -47,7 +48,7 @@ def get_options(option: str, config: dict) -> dict:
     Gets the options for the given config parameter
     '''
     if option in valid_options:
-        return config[option]
+        return deepcopy(config[option])
     else:
         logging.info(f"Invalid id {option}")
         return None
