@@ -27,88 +27,40 @@ defaults = {                # These are the default global configs if not specif
 }
 
 config_file = "youmirror.toml"                                      # This is the name for the config file to be used
-valid_options = {"youmirror", "channel", "playlist", "single"}   # These are the valid global options
+valid_options = {"youmirror", "channel", "playlist", "single"}      # These are the valid global options
 valid_yt = {"channel", "playlist", "single"}                        # Valid youtube types for the config
 
-def set_options(option: str, config: dict, options: dict) -> dict:
-    '''
-    Sets the options for the given config parameter from a dictionary
-    '''
-    # TODO this doesn't feel right. I think I should go back to just setting it directly
-    if option in valid_options:                 # If the option is valid
-        for key in options.keys():              # For each key in the options
-            config[option][key] = options[key]  # Set the option to the value
-        return config                           # Return the config
-    else:
-        logging.info(f"Invalid option {option}")
-        return None
-    
-def get_options(option: str, config: dict) -> dict:
+
+def get_globals(config: dict) -> dict:
     '''
     Gets the options for the given config parameter
     '''
-    if option in valid_options:
-        return deepcopy(config[option])
-    else:
-        logging.info(f"Invalid id {option}")
-        return None
-    
-# TODO
-# This can be refactored to utilize one of the other functions but to be totally honest I'm not sure how to do it
-# channel, channel_id, config, dict of settings
-def set_yt(yt: str, id: str, config: dict,  options: dict) -> dict:
-    '''
-    Sets the options for the given id
-    '''
-    if yt in valid_yt:
-        config[yt][id] = options
-        return config
-    else:
-        logging.error(f"Invalid youtube type {yt}")
-        return None
+    config = deepcopy(config)   # Copy the config
+    settings = config["youmirror"]
+    return settings
 
-def get_yt(yt: str, id: str, config: dict) -> dict:
+def set_globals(config: dict, settings: dict) -> dict:
     '''
-    Sets the options for the given id
+    Sets the options for the given config parameter from a dictionary
     '''
-    if yt in valid_yt and yt_exists(yt, id, config):    # If we are checking
-        return config[yt][id]
-    else:
-        logging.error(f"Invalid youtube type {yt} or id {id} does not exists")
-        return None
+    config = deepcopy(config)
+    config["youmirror"] = settings
+    return config
 
-def yt_exists(yt: str, id: str, config: dict) -> bool:
+def yt_exists(yt_string: str, id: str, config: dict) -> bool:
     '''
-    Checks if the url exists
+    Returns whether the yt id exists in the config
     '''
-    if yt in valid_yt:
-        return id in config[yt]
-    else:
-        logging.error(f"Invalid youtube type {yt}")
-        return False
 
-# TODO if yt doesn't exists, set it
-def add_yt(yt: str, id: str, config: dict, options: dict) -> dict:
-    '''
-    Adds the yt id to the config if it doesn't exist
-    '''
-    if not yt_exists(yt, id, config):
-        set_yt(yt, id, config, options)
-        return options
-    else:
-        logging.error(f"id {id} already exists")
-        return None
+    yt_section = deepcopy(config[yt_string])        # Get the section "channel, playlist, single"
+    return id in yt_section                         # return if the id is in there
 
-def remove_yt(yt: str, id: str, config: dict) -> dict:
+def set_yt(yt_string: str, id: str, config: dict, settings) -> None:
     '''
-    Removes yt id from the config if it exists
+    Sets the yt in the config and returns it
     '''
-    if yt_exists(yt, id, config):
-        del config[yt][id]
-        return config
-    else:
-        logging.error(f"Invalid youtube type {yt}")
-    return
+    config = deepcopy(config)
+    config[yt_string][id] = settings
 
 def load_config(config_path: str) -> dict:
     '''

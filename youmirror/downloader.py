@@ -149,7 +149,7 @@ def download_video(yt: YouTube, path: str, filename: str, options: dict) -> dict
             download_stream(audio_stream, path, "temp_audio.mp4", options)  # Download the audio stream
             audio_filepath = str(Path(path)/Path("temp_audio.mp4")) # Get the audio filepath
             combine_video_audio(filepath, audio_filepath) # Combine the video and audio
-        specs = {"resolution": video_stream.resolution, "bitrate": bitrate, "filesize": filesize, "length": length}
+        specs = {"resolution": video_stream.resolution, "bitrate": bitrate, "filesize": filesize, "length": length, "downloaded": True}
         return specs
     except Exception as e:
         logging.exception(f'Could not download video {filename}')
@@ -168,7 +168,7 @@ def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> di
         for caption in captions:         # Iterate through the captions
             if caption.code == caption_type:    # If the caption is the language we want
                 caption.download(output_path=path, title=filename) # Download the caption
-                specs = {"name": caption.name, "url": caption.url}
+                specs = {"name": caption.name, "url": caption.url, "downloaded": True}
                 return specs
         print("Could not find caption for language: " + caption_type)
         return None
@@ -187,7 +187,7 @@ def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
         length = yt.length                                      # Get the length of the video
         stream = get_audio_stream(yt, options)                  # Get the audio stream
         stream.download(output_path=path, filename=filename)    # Download the audio stream
-        specs = {"length": length, "filesize": stream.filesize, "bitrate": stream.abr}
+        specs = {"length": length, "filesize": stream.filesize, "bitrate": stream.abr, "downloaded": True}
         if options["has_ffmpeg"]:                           # TODO If they have ffmpeg, trim the audio
             pass
             # subprocess.run(["ffmpeg", "-y", "-i", f"{path}{filename}", "-ss", "00:00:00", "-t", f"{length}", f"{path}{filename}"])
@@ -208,7 +208,7 @@ def download_thumbnail(yt: YouTube, path: str, filename: str, options: dict) -> 
         filepath.touch()                # Create the file
         url = yt.thumbnail_url          # For now, pytube can only get the url for a thumbnail
         urlretrieve(url, filepath)      # Download the thumbnail
-        specs = {"url": url} # TODO figure out the filesize
+        specs = {"url": url, "downloaded": True} # TODO figure out the filesize
         return specs
     except Exception as e:
         logging.exception(f'Could not download thumbnail at {filepath}')
@@ -224,8 +224,6 @@ def download_single(yt: YouTube, file_type: str, filepath: str, options: dict) -
         "audio": download_audio, 
         "caption": download_caption, 
         "thumbnail": download_thumbnail}
-
-    print(f"Downloading {filepath}")
 
     try:
         path = str(Path(filepath).parent)    # Extract the path

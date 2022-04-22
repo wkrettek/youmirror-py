@@ -1,28 +1,24 @@
 Databaser
-    ---- Heavily considering using the url as the primary key for the yt databases ----- DONE
+    Need to start doing verification checks 
     Wrap up the databasing as much as possible to abstract it from database implementation
         using sqlitedict for now
     If I change the databasing, the database will still send the core a dict no matter what
 
 core
-    start wrapping up some of the repeated functionality
-        Wanna wrap up the filesize calculating and the downloading
-        wrap up grabbing the options and verifying the config
+    Finish remove()
+        Then do update()
+    Have to organize and document the new wrapped up functions
 
 Downloader
     Download is best effort but maybe could be simplified a bit
     Download audio could take a specified bitrate
-    If there is an exception when downloading a file, print it and skip
-        Don't stop till you get to the end
     Still getting xml errors when converting captions. I need to do this in-house
+        Maybe xml captions could be a download option? idk
     
 printer
+    Figure out how to put stuff in columns
+    Add ColOr
     [1] show name, type, url, num children, size
-    Do some basic formatting
-
-cli
-    remove
-        When removing singles, it will calculate 0B for the path
 
 
 
