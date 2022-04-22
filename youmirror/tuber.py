@@ -51,14 +51,13 @@ def get_metadata(yt: Union[Channel, Playlist, YouTube]) -> dict:
     '''
     meta = dict()
     meta["name"] = get_name(yt)             # Get the name
-    meta["url"] = get_url(yt)
+    meta["id"] = get_id(yt)
     if type(yt) in [Channel, Playlist]:     # Check if we have a channel or playlist
         children = get_children(yt)         # This will use pytube to get video_urls
-        children_ids = set([link_id(child, "single") for child in children])    # We want the ids (not urls) for databasing purposes
-        meta["children"] = children_ids     # Add the children ids to the metadata
+        meta["children"] = children         # Add the children urls to the metadata
         meta["available"] = True            # We will add a check later to determine this
 
-    elif isinstance(yt, YouTube):
+    elif type(yt) == YouTube:
         meta["available"] = is_available(yt)    # Individual videos can be checked if they are available
     return meta
 

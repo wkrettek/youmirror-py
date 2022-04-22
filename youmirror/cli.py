@@ -13,7 +13,7 @@ def main():
 @app.command()
 def sync(
     url : str = None,
-    root : str = typer.Argument(None, help="The root directory to sync to, default=\'./\'"),
+    root : str = typer.Argument('.', help="The root directory to sync to, default=\'./\'"),
     # dry_run : Optional[bool] = typer.Option(default=False, show_choices=False, help="Calculates changes with no execution"),
     # update :Optional[bool] = typer.Option(False, "--update", help="Updates the mirror before syncing"),
     ):
@@ -25,7 +25,7 @@ def sync(
     return
 
 @app.command()
-def new(root : str = typer.Argument(None)):
+def new(root : str = typer.Argument('.')):
     '''
     Create a new mirror in the given directory [default:'./']
     '''
@@ -36,7 +36,7 @@ def new(root : str = typer.Argument(None)):
 @app.command()
 def add(
     url : str,
-    root : Optional[str] = typer.Argument(default=None, help='Root directory for the mirror'),
+    root : Optional[str] = typer.Argument(default='.', help='Root directory for the mirror'),
     resolution : Optional[str] = typer.Option("720p", "--resolution", help='Preferred resolution to download'),
     captions: Optional[bool] = typer.Option(False, "--captions", show_default=True, help='Download captions if available'),
     no_video : Optional[bool] = typer.Option(False, "--no-video", show_default=True, help='Don\'t download video'),
@@ -57,7 +57,7 @@ def add(
 @app.command()
 def remove(
     url : str,
-    root : Optional[str] = typer.Argument(None, help='Root directory to remove from'),
+    root : Optional[str] = typer.Argument('.', help='Root directory to remove from'),
     no_rm : Optional[bool] = typer.Option(False, "--no-rm", help="Stop tracking without deleting any files")
     ):
     '''
@@ -87,7 +87,7 @@ def remove(
 
 
 @app.command()
-def show(root: str = typer.Argument(None)):
+def show(root: str = typer.Argument('.')):
     '''
     Shows the state of the mirror
     '''

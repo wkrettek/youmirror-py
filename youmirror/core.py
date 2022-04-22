@@ -19,7 +19,7 @@ This is the core module
 ------
 # TODO I think some asyncio could be implemented here when collecting data
 from the videos and waiting for youtube to respond. There might be other async
-optimizations I'm not seeing too
+optimizations with downloading too
 '''
 
 # logging.basicConfig(level=logging.DEBUG)
@@ -34,7 +34,7 @@ class YouMirror:
         root : str = ".",
         ) -> None:
         self.root: str = root                                       # Root directory
-        self.path: Path = Path(root)                                # Wrap root in a path object for convenience
+        self.path: Path = Path(self.root)                                # Wrap root in a path object for convenience
         self.db_file: str = databaser.db_file                       # Default name for the database file
         self.config_file: str = configurer.config_file              # Default name for the config file
         self.db_path: Path = self.path/Path(self.db_file)           # Full path for db file
@@ -55,7 +55,7 @@ class YouMirror:
         self.paths_table = dict()
         self.files_table = dict()
             
-    def new(self, root : str) -> None:
+    def new(self) -> None:
         '''
         Create a new mirror the given root directory
         '''
@@ -73,7 +73,7 @@ class YouMirror:
             print(f"Mirror directory \'{path}\' already exists")
         if not config_path.is_file():
             print(f"Creating config file \'{config_path}\'")
-            configurer.new_config(config_path, root)
+            configurer.new_config(config_path, self.root)
         else:
             print(f"Config file \'{config_path}\' already exists")
         if not db_path.is_file():
@@ -148,7 +148,7 @@ class YouMirror:
 
         # Add the id to the config
         yt_string = tuber.yt_to_type_string(yt)    # Get the yt type string
-        print(f"Adding {url} to the mirror")
+        print(f"Adding \'{name}\' to the mirror")
         logging.info(f"Adding {url} to the mirror")
         self.config[yt_string][id] = specs          # TODO doing it directly for now, but we should go through the configurer
         # configurer.add_yt(yt_string, id, self.config, specs)  # Add the url to the config # TODO TODO TODO
@@ -162,84 +162,71 @@ class YouMirror:
         files_to_add = dict()                   # Files
 
         # Generate keys for the db
-        keys = self.get_keys(yt, dict(), active_options, paths_table)    # Get all the keys to add to the table
-        url_to_add[url] = keys                                           # Mark the url for adding
-        paths_to_add.update({keys["path"]: {"parent": url}})             # Mark the path for adding
+        keys = self.generate_keys(yt, dict(), active_options, paths_table)    # Get all the keys to add to the table
+        url_to_add[url] = keys                                      # Mark the url for adding
+        paths_to_add.update({ keys["path"]: {"parent": url} })      # Mark the path for adding
+        logging.info(f"Adding {url} with keys {keys}")
 
-        # print(f'Adding {yt_string} \'{keys["name"]}\'')
-        # logging.debug(f"Adding {keys} to the database")
-
-        if (children := tuber.get_children(url)):   # If the passed url has any children
-
-            print(f'Found {len(keys["children"])} Youtube videos')
-            for child_url in children:          # For every url
-
-                yt = self.get_pytube(url)       # Get the pytube object
-                child_keys = self.get_keys()    # Get the keys for the db
-                singles_to_add[url] = child_keys    # Mark it for adding
-
-                files = deepcopy(child_keys["files"])   # Make a copy of the files
-                files = self.init_files(files)          # Put some initial values
-                files_to_add.update(files)              # Mark the files for adding
-
-                new_path = deepcopy(child_keys["path"])     # Make a copy of the path
-                new_path = self.init_path(new_path)         # Put some initial values
-                paths_to_add.update(new_path)               # Mark it for adding
-
-
-        if "files" in keys:             # This means we passed a single
-            singles_to_add[url] = keys      # Add the single to be added later  
-            files = deepcopy(keys["files"])  # Copy the files dict
-            for filepath in files:  # Add some extra info we only want in the files table
-                file = files[filepath] 
-                file["parent"] = id
-                file["downloaded"] = False
-                files_to_add[filepath] = file # Add the files to the local dict
+        if "files" in keys:
+            files = deepcopy(keys["files"])                         # Make a copy of the files
+            files = self.init_files(files, url, active_options)     # Put some initial values
+            files_to_add.update(files)                              # Mark the files for adding
+            logging.info(f"Adding files {files}")
 
         # Handle children
-        if "children" in keys:                              # If any children appeared when we got keys
+        children = tuber.get_children(yt)
+        if children:   # If the passed url has any children
+
             print(f'Found {len(keys["children"])} Youtube videos')
+            parent_keys = {"parent": url, "parent_name": keys["name"], 
+            "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
 
-            for child in tuber.get_children(item):   # We have to get the children again to get urls instead of ids :/
+            for child_url in children:
 
-                inject_keys = {"parent_id": id, "parent_name": 
-                keys["name"], "parent_type": yt_string, "path": keys["path"]}       # passing in parent info
-                child = self.get_pytube(child, self.cache)    # Wrap those children in pytube objects
-                child_url = tuber.get_url(child)
+                yt = self.get_pytube(child_url, self.cache)                 # Get the pytube object
+                child_keys = self.generate_keys(yt, parent_keys, active_options, paths_table) # Get the keys for the db
+                name = child_keys['name']                                   # Get the name of the pytube object
+                print(f'Adding \'{name}\'')
+                singles_to_add[child_url] = child_keys                            # Mark it for adding
+                # logging.info(f"Adding {child_url} with keys {child_keys}")
 
-                child_keys = self.get_keys(child, inject_keys, active_options, paths_table) # Get the rest of the keys from the pytube object
+                files = deepcopy(child_keys["files"])                       # Make a copy of the files
+                files = self.init_files(files, child_url, active_options)   # Put some initial values
+                files_to_add.update(files)                                  # Mark the files for adding
+                # logging.info(f"Adding files {files}")
 
-                singles_to_add[child_url] = child_keys                           # Mark the single to be added
-                print(f'Adding \'{child_keys["name"]}\'')
-                logging.debug(f"Adding {child_keys} to the database")
+                new_path = deepcopy(child_keys["path"])                     # Make a copy of the path
+                paths_to_add.update({ new_path: {"parent": child_url} })    # Mark it for adding
+                # logging.info(f"Adding path {new_path}")
 
-                paths_to_add.update({child_keys["path"]: {"parent": child_url}}) # Mark the path to be added
-                logging.debug(f'Adding path {child_keys["path"]} with id {child_url}')
+        # print(f'Url to add: {url_to_add}')
+        # print(f'Singles to add: {singles_to_add}')
+        # print(f'Paths to add: {paths_to_add}')
+        # print(f'Files to add: {files_to_add}')
 
-                files = deepcopy(child_keys["files"])    # Copy the files dict
-  
 
-        # # Calculate download size
-        # download_size: int = 0
-        # if not kwargs.get("no_dl", False):
-        #     for item in to_download:
-        #         single =  singles_to_add[tuber.get_id(item)]  # Get the keys for the single
-        #         for filename in single["files"]:        # Get the filenames
-        #             file_type = files_to_add[filename]["type"] # Get the file type "video", "audio", "caption"
-        #             print(f"Calculating filesize for {file_type} {str(Path(filename).name)}")
-        #             filesize = downloader.calculate_filesize(item, file_type, active_options)   # Get the filesize
-        #             files_to_add[filename]["filesize"] = filesize  # Record the filesize in the db
-        #             download_size += filesize           # Add the filesize to the total download size
+        # Calculate download size
+        download_size: int = 0
+        if not kwargs.get("no_dl", False):
+            for filepath in files_to_add:
+                file = files_to_add[filepath]               # Get the file info
+                parent = file["parent"]                     # Get the parent url
+                yt = self.get_pytube(parent, self.cache)    # Get the pytube object
+                file_type = file["type"]                    # Get the file type "video", "audio", etc.    
+                print(f"Calculating filesize for {file_type} {str(Path(filepath).name)}")
+                filesize = downloader.calculate_filesize(yt, file_type, active_options)   # Get the filesize
+                file["filesize"] = filesize                 # Record the filesize while we're here
+                download_size += filesize                   # Add the filesize to the total download size
             
-        #     # Show download size
-        #     download_size = printer.human_readable(download_size)   # Convert to human readable
-        #     print(f'Downloading will add {download_size} bytes to the mirror')
+            # Show download size
+            download_size = printer.human_readable(download_size)   # Convert to human readable
+            print(f'Downloading will add {download_size} bytes to the mirror')
 
-        # # Ask for confirmation
-        # if not kwargs.get("force", False) or not kwargs.get("no_dl", False):
-        #     if input("Continue? (y/n) ") != "y":                    # Get confirmation
-        #         print("Aborting")
-        #         return
+        # Ask for confirmation
+        if not kwargs.get("force", False) or not kwargs.get("no_dl", False):
+            if input("Continue? (y/n) ") != "y":                    # Get confirmation
+                print("Aborting")
+                return
 
         print("Saving...")
 
@@ -249,10 +236,10 @@ class YouMirror:
         # Open the database tables
         if yt_string in ['channel', 'playlist']:            # If it's a channel or playlist
             table = databaser.get_table(db_path, yt_string) # Get the appropriate database for the toplevel item
-            table[id] = keys                                # Add it to the database
+            table[url] = keys                                # Add it to the database
             table.commit()                                  # Commit the changes to the database
         else:
-            singles_to_add[id] = keys  # Else, add it to the singles pile
+            singles_to_add[url] = keys  # Else, add it to the singles pile
         singles_table = databaser.get_table(db_path, "single")  # Where yt videos go
         files_table = databaser.get_table(db_path, "files")  # Where files go
         # Commit to database
@@ -409,7 +396,7 @@ class YouMirror:
         # but we should go through the configurer
         configurer.save_config(config_path, self.config)
         
-    def sync(self, root: str = None, url: str = None, **kwargs: dict) -> None:
+    def sync(self, url: str = None, **kwargs: dict) -> None:
         '''
         Syncs the mirror against the database
         '''
@@ -419,12 +406,32 @@ class YouMirror:
         config_path = self.config_path
         db_path = self.db_path
 
-        # if not kwargs.get("update"):   # Update if specified
-        # self.update(root)
+        if kwargs.get("update"):   # Update if specified
+            self.update()
 
-        # if url: # If a url is specified, just sync that
-        #     print(f"Synced with \'{url}\'!")
-        #     return url
+        files_table = databaser.get_table(db_path, "files", autocommit=False) # Get the files table
+        singles_table = databaser.get_table(db_path, "single", autocommit=False) # Get the singles table   
+        if url:                                         # If a url is specified, just sync that
+            files_to_sync = dict()
+            yt_string = tuber.link_type(url)
+
+            if yt_string in ['channel', 'playlist']:
+                table = databaser.get_table(db_path, yt_string, autocommit=False)
+                children = table[url]["children"]
+                for child in children:
+                    files = deepcopy
+                    files_to_sync[child] = dict()
+
+            elif yt_string == 'single':
+                to_sync = [url]
+
+            else:
+                raise Exception(f'Unknown url type {yt_string}')
+
+
+
+            print(f"Synced with \'{url}\'!")
+            return url
 
         if not config_path.is_file():                           # Verify the config file exists   
             logging.error('Could not find config file in root directory \'%s\'', path)
@@ -491,10 +498,10 @@ class YouMirror:
 
     def update(
         self,
-        root: str = None
+        url: str = None,
         ) -> None:
         '''
-        Updates the database without downloading anything (returns objects to download if you so choose)
+        Updates the database without downloading anything
         '''
         if not root:
             root = self.root
@@ -534,8 +541,7 @@ class YouMirror:
 
 
         print("All set!")
-        to_download: set[YouTube] = set()
-        return to_download  
+        return
 
     def verify(self) -> None:
         '''
@@ -543,7 +549,7 @@ class YouMirror:
         '''
         return
 
-    def show(self, root: str) -> None:
+    def show(self) -> None:
         '''
         Prints the current state of the mirror
         '''
@@ -552,6 +558,8 @@ class YouMirror:
         path = self.path
         config_path = self.config_path
         db_path = self.db_path
+
+        self.config = configurer.load_config(config_path)       # Load the config file
 
         # Print the config
         channel = self.config['channel']
@@ -613,16 +621,15 @@ class YouMirror:
             logging.exception('Could not get pytube object for %s due to', url, e)
             return None
 
-    def get_keys(self, yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, paths: dict) -> dict:
+    def generate_keys(self, yt: Union[Channel, Playlist, YouTube], keys: dict, options: dict, paths: dict) -> dict:
         '''
-        Gets the keys that we want to put into the database and returns as a dictionary
-
+        Generates the keys that we want to put into the database and returns as a dictionary.
         You can pass in a dict if you want to inject some values from above
         '''
-        
+        keys = deepcopy(keys)                     # Make a copy of the injected keys so they don't get altered
         yt_string = tuber.yt_to_type_string(yt)   # Get the type as a string
         metadata = tuber.get_metadata(yt)         # Strip the useful data off the pytube object
-        keys.update(metadata)               # Add to our keys
+        keys.update(metadata)                     # Add to our keys
         yt_id = tuber.get_id(yt)                  # We use this to resolve collisions
 
         if yt_string in ["channel", "playlist"]:    # Do the same stuff for channels and playlists
@@ -653,21 +660,26 @@ class YouMirror:
             logging.error(f"Failed to get keys for {yt_string} {yt}")
             return None
 
-    def init_files(files: dict, url: str, options: dict) -> dict:
+    def init_files(self, files: dict, url: str, options: dict) -> dict:
         '''
-        Takes some files and fills in some default values
+        Takes files and fills in some default values
         '''
-
         for filepath in files:    # Add some extra info we only want in the files table
             file = files[filepath]
-            # file["parent"] = child_url
+            file["parent"] = url
             file["downloaded"] = False
-            logging.debug((f'Adding file {filepath} with keys {file}'))
+            if file["type"] == "video":
+                file["resolution"] = options["resolution"]
+            logging.debug((f'Updating file {filepath} with keys {file}'))
+        return files
 
-        # for filepath in files:    # Add some extra info we only want in the files table
-        #     file = files[filepath]
-        #     file["parent"] = child_url
-        #     file["downloaded"] = False
-        #     logging.debug((f'Adding file {filepath} with keys {file}'))
-        #     files_to_add[filepath] = file   # Add the files to the local dict 
+    def calculate_download_size(self, files: dict) -> int:
+        '''
+        Calculates the total size of the files to be downloaded
+        '''
+        size = 0
+        for filepath in files:
+            file = files[filepath]
+            size += file["size"]
+        return size
 

@@ -8,7 +8,7 @@ My first priority is finding the best matching resolution when the user specifie
 I could maybe make other types of downloads available. I think a possible one is like a metadata and another one is like the js. Could be useful
 
 '''
-from pytube import YouTube, StreamQuery, Stream, Caption, request
+from pytube import YouTube, Stream, Caption
 import logging
 from pathlib import Path
 import subprocess
@@ -24,7 +24,7 @@ def get_stream(yt: YouTube, file_type: str, options: dict) -> Stream:
     Applies all the filters and gets a stream object
     '''
     subtype = "mp4" # This is the subtype we're gonna go with
-    if "resolution" in options: resolution = options["resolution"]  # Get the resolution from the options
+    resolution = options["resolution"]  # Get the resolution from the options
     if file_type == "audio":
         stream = yt.streams.filter(only_audio=True, subtype=subtype).order_by("abr").desc()
     else:
@@ -131,25 +131,31 @@ def download_stream(stream: Stream, path: str, filename: str, options: dict) -> 
     stream.download(output_path=path, filename=filename) # Download to the appropriate path and name
     return True
 
-def download_video(yt: YouTube, path: str, filename: str, options: dict) -> str:
+def download_video(yt: YouTube, path: str, filename: str, options: dict) -> dict:
     '''
     Gets the proper stream for video and downloads it
     '''
     try:
         video_stream = get_video_stream(yt, options)                # Get the video stream
+        length = yt.length
+        filesize = video_stream.filesize                            # Get the filesize
+        bitrate = video_stream.abr                                  # Get the bitrate
         download_stream(video_stream, path, filename, options)      # Download the video stream
         if not video_stream.includes_audio_track:                   # If no audio track
-            filepath = str(Path(path)/Path(filename))             # Get the filepath
+            filepath = str(Path(path)/Path(filename))               # Get the filepath
             audio_stream = get_audio_stream(yt, options)            # Get the audio stream
+            filesize += audio_stream.filesize                       # Add the filesize
+            bitrate = audio_stream.abr                              # Get the bitrate
             download_stream(audio_stream, path, "temp_audio.mp4", options)  # Download the audio stream
             audio_filepath = str(Path(path)/Path("temp_audio.mp4")) # Get the audio filepath
             combine_video_audio(filepath, audio_filepath) # Combine the video and audio
-        return filename
+        specs = {"resolution": video_stream.resolution, "bitrate": bitrate, "filesize": filesize, "length": length}
+        return specs
     except Exception as e:
         logging.exception(f'Could not download video {filename}')
         return None
 
-def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> str:
+def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> dict:
     '''
     Gets the captions from the video and downloads them
     # TODO This implements a uses a fix that is not in pytube right now so it is in my wkrettek repo
@@ -162,7 +168,8 @@ def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> st
         for caption in captions:         # Iterate through the captions
             if caption.code == caption_type:    # If the caption is the language we want
                 caption.download(output_path=path, title=filename) # Download the caption
-                return filename
+                specs = {"name": caption.name, "url": caption.url}
+                return specs
         print("Could not find caption for language: " + caption_type)
         return None
     except Exception as e:
@@ -177,13 +184,14 @@ def download_audio(yt: YouTube, path: str, filename: str, options: dict) -> str:
     Audio files are coming out too long, so we want to trim it to the reported length if it is longer
     '''
     try:
-        length = yt.length                                  # Get the length of the video
-        stream = get_audio_stream(yt, options)           # Get the audio stream
+        length = yt.length                                      # Get the length of the video
+        stream = get_audio_stream(yt, options)                  # Get the audio stream
         stream.download(output_path=path, filename=filename)    # Download the audio stream
+        specs = {"length": length, "filesize": stream.filesize, "bitrate": stream.abr}
         if options["has_ffmpeg"]:                           # TODO If they have ffmpeg, trim the audio
             pass
             # subprocess.run(["ffmpeg", "-y", "-i", f"{path}{filename}", "-ss", "00:00:00", "-t", f"{length}", f"{path}{filename}"])
-        return filename
+        return specs
     except Exception as e:
         logging.exception(f'Could not download audio {filename}')
         return None
@@ -200,12 +208,13 @@ def download_thumbnail(yt: YouTube, path: str, filename: str, options: dict) -> 
         filepath.touch()                # Create the file
         url = yt.thumbnail_url          # For now, pytube can only get the url for a thumbnail
         urlretrieve(url, filepath)      # Download the thumbnail
-        return filename
+        specs = {"url": url} # TODO figure out the filesize
+        return specs
     except Exception as e:
         logging.exception(f'Could not download thumbnail at {filepath}')
         return None
 
-def download_single(yt: YouTube, file_type: str, filepath: str, options: dict) -> None:
+def download_single(yt: YouTube, file_type: str, filepath: str, options: dict) -> dict:
     '''
     Takes a single YouTube object and handles the downloading based on configs
     '''
