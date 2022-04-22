@@ -48,6 +48,7 @@ db
 I need to abstract the database management as much as possible so it's easy to swap out.
 If a better databasing system comes along I will use that instead, but for now sqlitedict is fine.
 '''
+from copy import deepcopy
 from sqlitedict import SqliteDict
 import logging
 from pathlib import Path
@@ -55,17 +56,37 @@ from pathlib import Path
 db_file = "youmirror.db"
 valid_tables = {"channel", "playlist", "single", "paths", "files"}
 
-def open_table(path: Path, table: str, autocommit=True) -> SqliteDict:
+def open_table(path: Path, table_name: str, autocommit=True) -> SqliteDict:
     '''
     Returns a table from the database that matches the string
     '''
-    if table in valid_tables:
-        return SqliteDict(path, tablename=table, autocommit=autocommit)
+    if table_name in valid_tables:
+        return SqliteDict(path, tablename=table_name, autocommit=autocommit)
     else:
-        logging.error(f"Invalid table {table} given")
+        logging.error(f"Invalid table {table_name} given")
         return None
 
-def set_item(id: str, keys: dict, table: SqliteDict) -> str:
+def close_table(table: SqliteDict) -> bool:
+    '''
+    Closes the table and returns if successful
+    '''
+    try:
+        table.close()
+        return True
+    except Exception as e:
+        logging.exception('Could not close table %s due to %s', table.tablename, e)
+
+def commit_table(table: SqliteDict) -> bool:
+    '''
+    Commits the table and returns if successful
+    '''
+    try:
+        table.commit()
+        return True
+    except Exception as e:
+        logging.exception('Could not commit table %s due to %s', table.tablename, e)
+
+def set_entry(id: str, keys: dict, table: SqliteDict) -> str:
     '''
     Sets an item in the given database table
     '''
@@ -75,49 +96,28 @@ def set_item(id: str, keys: dict, table: SqliteDict) -> str:
     except Exception as e:
         logging.error("Could not add id %s to table %s", id, table.tablename)
 
-# def set_id(table: SqliteDict, id: str, value: dict) -> None:
-#     '''
-#     Sets a row in the given table by id
-#     '''
-#     table[id] = value
+def get_entry(id: str, table: SqliteDict) -> dict:
+    '''
+    If the id exists in the table, returns the matching entry as a dict
+    '''
+    if id in table:
+        entry = deepcopy(table[id])
+        return entry
+    else:
+        logging.error("Could not find entry for %s in table %s", id, table.tablename)
 
-# def get_id(table: SqliteDict, id: str) -> dict:
-#     '''
-#     Gets a row in the given table by id
-#     '''
-#     if  id in table:
-#         return table[id]
-#     else:
-#         logging.debug(f"Could not find id {id} in table {table}")
-#         return {}
+def remove_entry(id: str, table: SqliteDict) -> bool:
+    '''
+    Removes the entry from the table if it exists and returns if successful
+    '''
+    try:
+        if id in table:
+            del table[id]
+        return True
+    except Exception as e:
+        logging.exception("Could not remove %s from table %s due to %s", id, table.tablename, e)
+        return False
 
-# def set_key(table: SqliteDict, id: str, key: str, value: str) -> str:
-#     '''
-#     Sets the value of the key for the given id
-#     '''
-#     try:
-#         row = get_id(table, id) # Get the row by id
-#         row[key] = value
-#         set_id(table, id, row)
-#         return value
-#     except Exception as e:
-#         logging.exception(f"Could not set key {key} to value {value} due to {e}")
-
-# def get_key(table: SqliteDict, id: str, key: str) -> str:
-#     '''
-#     Gets the value of the key for the given id
-#     '''
-#     try:
-#         row = get_id(table, id) # Get the row by id
-#         if key in row:
-#             value = row[key]
-#             return value
-#         else:
-#             logging.debug(f"Could not find key {key} for id {id} in table {table.tablename}")
-#             return ""
-#     except Exception as e:
-#         logging.exception(f"Could not set key {key} in id {id} due to {e}")
-#         return None
 
 # def add_yt(table: SqliteDict, filetree: SqliteDict, yt_string: str, id: str, keys: dict, ) -> None:
 #     '''

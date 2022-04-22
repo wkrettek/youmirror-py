@@ -52,7 +52,7 @@ def yt_exists(yt_string: str, id: str, config: dict) -> bool:
     Returns whether the yt id exists in the config
     '''
 
-    yt_section = deepcopy(config[yt_string])        # Get the section "channel, playlist, single"
+    yt_section = config[yt_string]                  # Get the section "channel, playlist, single"
     return id in yt_section                         # return if the id is in there
 
 def set_yt(yt_string: str, id: str, config: dict, settings) -> None:
@@ -61,6 +61,20 @@ def set_yt(yt_string: str, id: str, config: dict, settings) -> None:
     '''
     config = deepcopy(config)
     config[yt_string][id] = settings
+
+def remove_yt(yt_string: str, id: str, config: dict) -> dict:
+    '''
+    Removes the id from the appropriate yt section and returns the new config
+    '''
+    try:
+        config = deepcopy(config)       # Copy config for safety
+        yt_section = config[yt_string]  # Get the section "channel", "playlist", "single"
+        if id in yt_section:            # If it's there
+            del config[yt_string][id]   # Delete it
+        return config
+    except Exception as e:
+        logging.exception('Could not remove %s, %s from config due to %s', yt_string, id, e)
+
 
 def load_config(config_path: str) -> dict:
     '''
