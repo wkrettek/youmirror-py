@@ -429,7 +429,6 @@ class YouMirror:
                     yt = self.get_pytube(parent, self.cache)    # Get the pytube object   
                     print(f"Downloading {file_type} {str(Path(filepath).name)}")
                     if (specs := downloader.download_single(yt, file_type, filepath, active_options)):
-                        print(f"Downloaded {file_type} {str(Path(filepath).name)}")
                         files_table[filepath].update(specs)     # Save the file specs to the database
                         files_table.commit()                    # Commit the changes to the database
                 
