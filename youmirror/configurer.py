@@ -47,6 +47,25 @@ def set_globals(config: dict, settings: dict) -> dict:
     config["youmirror"] = settings
     return config
 
+def get_section(section: str, config: dict):
+    '''
+    Returns the appropriate section thingy
+    '''
+    return deepcopy(config[section])
+
+def get_urls(config: dict) -> list[str]:
+    '''
+    Gets all the urls in the config
+    '''
+    urls: list[str] = []
+    for yt in valid_yt:
+        ids = config[yt]
+        for id in ids:
+            url = config[yt][id]["url"]
+            urls.append(url)
+    return urls   
+
+
 def yt_exists(yt_string: str, id: str, config: dict) -> bool:
     '''
     Returns whether the yt id exists in the config
@@ -55,12 +74,20 @@ def yt_exists(yt_string: str, id: str, config: dict) -> bool:
     yt_section = config[yt_string]                  # Get the section "channel, playlist, single"
     return id in yt_section                         # return if the id is in there
 
+def get_yt(yt_string: str, id: str, config: dict) -> dict:
+    '''
+    Gets the dictionary for the given 
+    '''
+    yt = config[yt_string][id]
+    return yt
+
 def set_yt(yt_string: str, id: str, config: dict, settings) -> None:
     '''
     Sets the yt in the config and returns it
     '''
     config = deepcopy(config)
     config[yt_string][id] = settings
+    return config
 
 def remove_yt(yt_string: str, id: str, config: dict) -> dict:
     '''
@@ -114,8 +141,8 @@ def new_config(config_path: Path, root: str) -> Path:
             from youmirror.template import template         # Import the template dictionary
             name = root                                     # Set the name to the new mirror's root
             created_at = datetime.now().strftime('%Y-%m-%d')# Mark the creation date
-            d = {"name": name, "created_at": created_at}    # New options
-            set_options("youmirror", template, d)           # Save the additional options            
+            info = {"name": name, "created_at": created_at} # New info
+            set_globals(template, info)                     # Save the additional info         
             return save_config(config_path, template)       # Save the config
         else:
             logging.info(f'Config file {config_path} already exists')

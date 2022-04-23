@@ -27,7 +27,7 @@ def get_files(entry: dict) -> dict:
     Gets the value for the 'files' key from the given dictionary
     '''
     if "files" in entry:
-        return deepcopy(entry["files"])
+        entry["files"]
     else:
         return None
 
@@ -89,7 +89,7 @@ class YouMirror:
         self.load_config()
 
         # Load the options from config
-        if not (active_options := self.load_options(kwargs)):
+        if not (active_options := self.load_options(**kwargs)):
             print("Could not load options")
             return
         logging.debug("Active options:", active_options)
@@ -231,13 +231,11 @@ class YouMirror:
         # Localize our paths so we don't have to type self a bunch of times
         config_path = self.config_path
         db_path = self.db_path
-
         # Verify and load config
         print("Loading config...")
         if not self.verify_config():
             return
         self.load_config()
-        
         # Parse the url & create pytube object  ----- TODO probably don't need to get pytube involved
         try:
             yt_string = tuber.link_type(url)                # Get the url type (channel, playlist, single)
@@ -247,7 +245,6 @@ class YouMirror:
             name = tuber.get_name(yt)
         except Exception as e:
             logging.exception('Could not get info for url \'%s\' due to e', url, e)
-
         # Check if the id is already in the config
         if configurer.yt_exists(yt_string, id, self.config):
             print(f'Removing {yt_string} \'{name}\'')
@@ -279,8 +276,10 @@ class YouMirror:
             shutil.rmtree(remove_path, ignore_errors=True)
   
         # Calculate changes
-        paths_to_remove, files_to_remove, singles_to_remove = set(str)                 # Track stuff to remove
-        singles_table = databaser.open_table(db_path, "single", autocommit=False)   # Open singles table
+        paths_to_remove = set() # Track stuff to remove
+        files_to_remove = set()
+        singles_to_remove = set()       
+        singles_table = databaser.open_table(db_path, "single", autocommit=True)   # Open singles table
 
         paths_to_remove.add(remove_path)                # Mark the path for removal
         if files := get_files(entry):                   # Mark any files for removal
@@ -288,12 +287,14 @@ class YouMirror:
 
         if yt_string in ["channel", "playlist"]:        # If it's a channel or playlist
             singles_to_remove.update(entry["children"]) # Mark the children for removal
+        else:
+            singles_to_remove.add(url)                  # Else, mark it for removal
 
         for single in singles_to_remove:
             entry = databaser.get_entry(single, singles_table)
             path = entry["path"]
             paths_to_remove.add(path)
-            files = get_files(entry)
+            files = entry["files"]
             files_to_remove.update(files)
 
         print(f'removing {len(singles_to_remove)} singles')
@@ -303,15 +304,13 @@ class YouMirror:
         print("Saving changes...")
         # Open databases
         db_path = self.db_path
-        files_table = databaser.open_table(db_path, "files", autocommit=False) # Get the files table
-        paths_table = databaser.open_table(db_path, "paths", autocommit=False) # Get the paths table
+        files_table = databaser.open_table(db_path, "files", autocommit=True) # Get the files table
+        paths_table = databaser.open_table(db_path, "paths", autocommit=True) # Get the paths table
 
         # Make changes to the database
         if yt_string != 'single':   # If it's a channel or playlist, make sure to remove from its table
-            table = databaser.open_table(db_path, yt_string, autocommit=False)
+            table = databaser.open_table(db_path, yt_string, autocommit=True)
             databaser.remove_entry(url, table)
-            databaser.commit_table(table)
-            databaser.close_table(table)
 
         for path in paths_to_remove:                    # Remove paths
             databaser.remove_entry(path, paths_table)
@@ -321,9 +320,12 @@ class YouMirror:
             databaser.remove_entry(single, singles_table)
 
         # Commit changes to the database
-        for table in [files_table, singles_table, paths_table]:
-            table.commit()
-            table.close()
+        # databaser.commit_table(files_table)
+        # databaser.close_table(files_table)
+        # databaser.commit_table(paths_table)
+        # databaser.close_table(paths_table)
+        # databaser.commit_table(singles_table)
+        # databaser.close_table(singles_table)
 
         # Update config file
         self.config = configurer.remove_yt(yt_string, id, self.config)  # Remove from the config file
@@ -347,11 +349,9 @@ class YouMirror:
         if kwargs.get("update"):   # Update if specified
             self.update(url=url)
 
-        # TODO Check for URL
+        active_options = self.load_options(**kwargs)
 
-        active_options = self.load_options(kwargs)
-
-
+        # Open databases
         files_table = databaser.open_table(db_path, "files") # Get the files table
         singles_table = databaser.open_table(db_path, "single") # Get the singles table 
 
@@ -397,14 +397,9 @@ class YouMirror:
 
         # If no url is specified, sync everything
         urls_to_sync = set()
-
-        for yt_string in ['channel', 'playlist', 'single']:
-            items = configurer.get_options(yt_string, self.config)
-            for id in items:
-                print(items[id]["url"])
-                # urls_to_sync.add(item["url"])
-            
-        # print(urls_to_sync)
+        urls_to_sync = configurer.get_urls(self.config)
+        for url in urls_to_sync:
+            self.sync(url=url, **kwargs)
 
         print("All done!")
         return
@@ -626,6 +621,9 @@ class YouMirror:
         return True
 
     def load_config(self):
+        '''
+        Loads the config into self
+        '''
         try:
             self.config = configurer.load_config(self.config_path)
         except Exception as e:
