@@ -178,7 +178,7 @@ class YouMirror:
 
             # Show download size
             download_size = printer.human_readable(download_size)   # Convert to human readable
-            print(f'Downloading will add {download_size} bytes to the mirror')
+            print(f'Downloading will add {download_size} to the mirror')
 
         # Ask for confirmation
         if not kwargs.get("force", False) or not kwargs.get("no_dl", False):
@@ -319,14 +319,6 @@ class YouMirror:
         for single in singles_to_remove:                # Remove singles
             databaser.remove_entry(single, singles_table)
 
-        # Commit changes to the database
-        # databaser.commit_table(files_table)
-        # databaser.close_table(files_table)
-        # databaser.commit_table(paths_table)
-        # databaser.close_table(paths_table)
-        # databaser.commit_table(singles_table)
-        # databaser.close_table(singles_table)
-
         # Update config file
         self.config = configurer.remove_yt(yt_string, id, self.config)  # Remove from the config file
         configurer.save_config(config_path, self.config)                # Save to config on disk
@@ -359,7 +351,7 @@ class YouMirror:
             name = tuber.get_name(self.get_pytube(url, self.cache)) # Get name for pretty printing
             files_to_sync = dict()  
             yt_string = tuber.link_type(url)            # Get the type of link
-            print(f"Syncing with {yt_string} {name}")
+            print(f"Syncing with {yt_string} \'{name}\'")
 
             if yt_string in ['channel', 'playlist']:
                 table = databaser.open_table(db_path, yt_string)   # Open a table
@@ -393,11 +385,16 @@ class YouMirror:
                     print(f'Could not download {file_type} {filename}')
                 
             print(f"Synced with \'{name}\'!")
-            return url
+            return
 
         # If no url is specified, sync everything
-        urls_to_sync = set()
-        urls_to_sync = configurer.get_urls(self.config)
+        urls_to_sync = list()
+
+        # Collecting urls from config
+        for yt_string in ["channel", "playlist", "single"]: 
+            urls_to_sync.extend(configurer.get_urls(yt_string, self.config))
+
+        # Syncing every url
         for url in urls_to_sync:
             self.sync(url=url, **kwargs)
 
@@ -408,45 +405,86 @@ class YouMirror:
     def update(
         self,
         url: str = None,
+        **kwargs: dict
         ) -> None:
         '''
         Updates the database without downloading anything
         '''
-        if not root:
-            root = self.root
 
         # Localize our paths so we don't have to type self a bunch of times
-        path = self.path
         config_path = self.config_path
         db_path = self.db_path
 
-        if not config_path.is_file():                           # Verify the config file exists   
-            logging.error(f'Could not find config file in root directory \'{path}\'')
+        if not self.verify_config():
             return
-        if not db_path.is_file():                               # Verify the database file exists
-            logging.error(f'Could not find database file in root directory \'{path}\'')
+        self.load_config()
+        active_options = self.load_options(**kwargs)
+
+        if url:
+        
+            yt = self.get_pytube(url, self.cache)   # Get the pytube object
+            new_children = set(tuber.get_children(yt))  # Get the children urls
+            yt_string = tuber.link_type(url)        # Get the type of link
+            name = tuber.get_name(yt)               # Get the name for pretty printing
+            if yt_string not in ['channel', 'playlist']:
+                print(f'Cannot update {yt_string} \'{name}\'')
+                return
+
+            table = databaser.open_table(db_path, yt_string)    # Open the appropriate table
+            entry = databaser.get_entry(url, table)             # Get the entry from the table
+            old_children = set(entry["children"])                    # Get the children from the entry
+            difference = new_children.difference(old_children)       # Get the difference between the two sets
+            print(f'Found {len(difference)} new items for {yt_string} {name}')
+            entry["children"] = new_children.union(old_children)     # Update the entry with the new children
+
+            parent_keys = {"parent": url, "parent_name": entry["name"], 
+            "parent_type": yt_string, "path": entry["path"]}       # passing in parent info
+
+            singles_to_add = dict()
+            files_to_add = dict()
+            paths_to_add = dict()
+            paths_table = databaser.open_table(db_path, "paths")   # Open the paths table (to resolve collisions)
+
+            for child_url in difference:
+                yt = self.get_pytube(child_url, self.cache)                 # Get the pytube object
+                child_keys = self.generate_keys(yt, parent_keys, active_options, paths_table) # Get the keys for the db
+                name = child_keys['name']                                   # Get the name of the pytube object
+                print(f'Adding \'{name}\'')
+                singles_to_add[child_url] = child_keys                      # Mark it for adding
+
+                files = deepcopy(child_keys["files"])                       # Make a copy of the files
+                files = self.init_files(files, child_url, active_options)   # Put some initial values
+                files_to_add.update(files)                                  # Mark the files for adding
+
+                new_path = deepcopy(child_keys["path"])                     # Make a copy of the path
+                paths_to_add.update({ new_path: {"parent": child_url} })    # Mark it for adding
+
+            # Open tables
+            singles_table = databaser.open_table(self.db_path, "single")  # Where yt videos go
+            files_table = databaser.open_table(self.db_path, "files")  # Where files go
+        
+            # Add local changes
+            databaser.set_entry(url, entry, table) # Add the new children
+            files_table.update(files_to_add)       # Record the files in the database
+            paths_table.update(paths_to_add)       # Record the paths in the database
+            singles_table.update(singles_to_add)   # Record the singles in the database
+
+            # Commit changes and close
+            for t in [table, files_table, paths_table, singles_table]:
+                databaser.commit_table(t)
+                databaser.close_table(t)
+
+            print(f"Updated \'{name}\'!")
             return
-        self.config = configurer.load_config(config_path)       # Load the config file
 
-        channels = configurer.get_options("channel", self.config)   # Load channels
-        playlists = configurer.get_options("playlist", self.config)   # Load channels
-
-        channels_table = self.get_table("channel")   # Load channels table
-        playlists_table = self.get_table("playlist") # Load playlists table
-
-        # For each item in channels
-        for id in channels:
-            channel = channels[id]
-            print("id ==", id)
-            url = channel["url"]    # Get the url
-            print("url ==" ,url)
-            yt = self.get_pytube(url, self.cache)  # Get the pytube object
-            children = tuber.get_children(yt)      # Get children urls
-            db_channel = channels_table[id] # Get the channel from the db
-            db_children = db_channel["children"]    # Get the children in the database
-            print(len(children) == len(db_children)) # Determine whether there are new videos
-            if len(children) != len(db_children):    # If there are new videos, add them to the database
-                db_children.update(children)
+        # If no url is specified, update everything
+        urls_to_update: list = []
+        for yt_string in ['channel', 'playlist']:
+            urls_to_update.extend(configurer.get_urls(yt_string, self.config))
+            
+        # Update all the urls
+        for url in urls_to_update:
+            self.update(url=url, **kwargs)
 
 
         print("All set!")
@@ -454,7 +492,8 @@ class YouMirror:
 
     def verify(self) -> None:
         '''
-        Verifies the integrity of the mirror (somehow)
+        Verifies the integrity of the mirror (compare database to config? Walk down or walk up?)
+        Wanna pick up untracked things in the database
         '''
         return
 
@@ -465,7 +504,6 @@ class YouMirror:
 
         # Localize our paths so we don't have to type self a bunch of times
         config_path = self.config_path
-        db_path = self.db_path
 
         if not self.verify_config():
             return
@@ -482,19 +520,19 @@ class YouMirror:
             item = channel[yt]
             name = item['name']
             url = item['url']
-            print(f"channel - {name} - {url} -")
+            print(f"channel - {name} - {url}")
 
         for yt in playlist:
             item = playlist[yt]
             name = item['name']
             url = item['url']
-            print(f"playlist - {name} - {url} -")
+            print(f"playlist - {name} - {url}")
 
         for yt in single:
             item = single[yt]
             name = item['name']
             url = item['url']
-            print(f"single - {name} - {url} -")
+            print(f"single - {name} - {url}")
 
     def archive(self, root: str) -> None:
         '''
@@ -600,6 +638,9 @@ class YouMirror:
         return download_size
 
     def calculate_path_size(self, path):
+        '''
+        Calculates the size of all the files in a path
+        '''
         path_size = 0
         for root, dirs, files in os.walk(path, topdown=False):  # Find all the files in the directory
             for name in files:                                  # Search through all the files

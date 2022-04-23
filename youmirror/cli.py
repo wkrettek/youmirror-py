@@ -12,16 +12,18 @@ def main():
 
 @app.command()
 def sync(
-    url : str = typer.Argument(None, help="Specify the url to sync"),
-    root : str = typer.Argument('.', help="The root directory to sync to, default=\'./\'"),
+    url: str = typer.Argument(None, help="Specify the url to sync"),
+    root: str = typer.Argument('.', help="The root directory to sync to, default=\'./\'"),
+    update: bool = typer.Option(False, '--update', help="Update the database before syncing"),
     # dry_run : Optional[bool] = typer.Option(default=False, show_choices=False, help="Calculates changes with no execution"),
     # update :Optional[bool] = typer.Option(False, "--update", help="Updates the mirror before syncing"),
     ):
     '''
     Checks for new videos and downloads them
     '''
+    kwargs = {"update": update}
     ym = YouMirror(root=root)
-    ym.sync(url=url)
+    ym.sync(url=url, **kwargs)
     return
 
 @app.command()
@@ -75,15 +77,16 @@ def remove(
 #     '''
 #     return
 
-# @app.command()
-# def update(
-#     root : Optional[str] = typer.Argument(default=None, help='Root directory for the mirror'),
-#     ):
-#     '''
-#     Checks for new videos without downloading
-#     '''
-#     ym = YouMirror()
-#     ym.update(root)
+@app.command()
+def update(
+    url : str = typer.Argument(None, help="Specify the url to update"),
+    root : Optional[str] = typer.Argument(default='.', help='Root directory for the mirror'),
+    ):
+    '''
+    Checks for new videos without downloading
+    '''
+    ym = YouMirror(root=root)
+    ym.update(url=url)
 
 
 @app.command()

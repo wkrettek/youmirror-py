@@ -53,16 +53,13 @@ def get_section(section: str, config: dict):
     '''
     return deepcopy(config[section])
 
-def get_urls(config: dict) -> list[str]:
+def get_urls(yt_string: str, config: dict) -> list[str]:
     '''
-    Gets all the urls in the config
+    Gets all the urls for a yt_string
     '''
     urls: list[str] = []
-    for yt in valid_yt:
-        ids = config[yt]
-        for id in ids:
-            url = config[yt][id]["url"]
-            urls.append(url)
+    for id in config[yt_string]:
+        urls.append(config[yt_string][id]["url"])
     return urls   
 
 
