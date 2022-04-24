@@ -338,16 +338,15 @@ class YouMirror:
             return
         self.load_config()
 
-        if kwargs.get("update"):   # Update if specified
-            self.update(url=url)
-
         active_options = self.load_options(**kwargs)
 
         # Open databases
         files_table = databaser.open_table(db_path, "files") # Get the files table
         singles_table = databaser.open_table(db_path, "single") # Get the singles table 
 
-        if url:                                         # If a url is specified, just sync that
+        if url:        
+            if kwargs.get("update"):   # Update if specified
+                self.update(url=url, **kwargs)                                 # If a url is specified, just sync that
             name = tuber.get_name(self.get_pytube(url, self.cache)) # Get name for pretty printing
             files_to_sync = dict()  
             yt_string = tuber.link_type(url)            # Get the type of link
@@ -377,7 +376,7 @@ class YouMirror:
                 parent = file["parent"]                     # Get the parent url
                 file_type = file["type"]                    # Get the file type "video", "audio", etc. 
                 yt = self.get_pytube(parent, self.cache)    # Get the pytube object   
-                print(f"Downloading {file_type} {filename}")
+                print(f"Downloading {file_type} {filepath}")
                 if (specs := downloader.download_single(yt, file_type, filepath, active_options)):
                     files_table.update({filepath:specs})     # Save the file specs to the database
                     files_table.commit()                    # Commit the changes to the database
@@ -423,6 +422,8 @@ class YouMirror:
         if url:
         
             yt = self.get_pytube(url, self.cache)   # Get the pytube object
+            if tuber.link_type(url) == 'single':    # Singles dont get updated
+                return
             new_children = set(tuber.get_children(yt))  # Get the children urls
             yt_string = tuber.link_type(url)        # Get the type of link
             name = tuber.get_name(yt)               # Get the name for pretty printing
@@ -486,6 +487,9 @@ class YouMirror:
         for url in urls_to_update:
             self.update(url=url, **kwargs)
 
+        # Sync if specified
+        if kwargs.get("sync"):   
+            self.sync(url=url, **kwargs)
 
         print("All set!")
         return
