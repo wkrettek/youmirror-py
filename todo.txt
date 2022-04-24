@@ -1,36 +1,24 @@
-core
-    utilize cache more
-    start wrapping up some of the repeated functionality
-        simplify top level core code as much as possible so it's easier to troubleshoot things
-
-Downloader
-    Download is best effort but maybe could be simplified a bit
-    Download specified resolution and combine audio with ffmpeg?
-        --I'm doing this rn. Have to validation test a lot and make sure it doens't call ffmpeg if they don't have it
-    Download audio could take a specified bitrate
-    If there is an exception when downloading a file, print it and skip
-        Don't stop till you get to the end
-    Still getting xml errors when converting captions. I need to do this in-house
-    
-printer
-    [1] show name, type, url, num children, size
-    Do some basic formatting
-
-cli
-    remove
-        When removing singles, it will calculate 0B for the path
-    check
-        Looks through all the playlists and channels
-            Finds children
-            If there are new children
-                Add them to the database
-
 Databaser
-    Need to put lots and lots of keys in the database because we can easily remove them later if unused,
-    but can't easily put new ones in
+    Need to start doing verification checks 
     Wrap up the databasing as much as possible to abstract it from database implementation
         using sqlitedict for now
     If I change the databasing, the database will still send the core a dict no matter what
+
+core
+    Finish remove()
+        Then do update()
+    Have to organize and document the new wrapped up functions
+
+Downloader
+    Download is best effort but maybe could be simplified a bit
+    Download audio could take a specified bitrate
+    Still getting xml errors when converting captions. I need to do this in-house
+        Maybe xml captions could be a download option? idk
+    
+printer
+    Figure out how to put stuff in columns
+    Add ColOr
+    [1] show name, type, url, num children, size
 
 
 

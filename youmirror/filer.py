@@ -1,14 +1,11 @@
-
-
 '''
-This module manages the filetree, I don't really know why it's called helper
-but I like all the -er names for modules so here we are
-------
+This module manages the filetree
+----
 This is the second most important module in the project, it must be able to 
 generate the paths and filenames that make up the project with the given options
 and resolve any naming conflicts. Thankfully, we can do most of our work with just
 pathlib and some crafty organization
-# TODO
+----
 This is what the filetree looks like:
    Root
     | -- channels
@@ -22,10 +19,7 @@ This is what the filetree looks like:
     | -- singles
             | -- single name
                     | -- files
-
-I'm gonna have to change single to video everywhere aren't I -_-
-------------------
-I think I can implement an "export" command later on to use the db to export things that are grouped together. Sucks if your db gets corrupted, but oh well
+----
 '''
 from pathlib import Path
 from pytube.helpers import safe_filename
@@ -67,6 +61,7 @@ def calculate_path(yt_string: str, parent_name: str, single_name) -> str:
     '''
     Calculates 
     formula = /yt_strings/parent_name/single_name
+    This is gonna be refactored cause I'm not using it the intended way in get_keys()
     '''
     valid_yt_strings = {"channel" , "playlist", "single"}           # Valid yt strings
     parent_name = safe_filename(parent_name).replace(' ', '_')                        # Sanitize the parent name (using pytube)
@@ -126,4 +121,30 @@ def verify_installation(filepath: Path) -> bool:
     else:
         logging.info(f"File {filepath} is not installed")
     return False
+
+def get_files(path: str, yt_name: str, options: dict) -> dict:
+    '''
+    Returns a dict of filenames we want to download
+    files = {filepath: {type: file_type, language: language}, filepath: {type: file_type, language: language}}
+    '''
+    to_download = { # Returns true/false if we want to download the video
+        "video": options["dl_video"], 
+        "audio": options["dl_audio"], 
+        "caption": options["dl_captions"], 
+        "thumbnail": options["dl_thumbnail"]
+    }
+    files = dict()
+    for file_type in to_download:
+        if to_download[file_type]:   # Check the boolean value matching the file_type
+            if file_type == "caption":
+                for language in options["captions"]:    # We can download multiple caption types
+                    filename = calculate_filename(file_type, f'{yt_name}_{language}')    # Add f'_{caption_type}'
+                    filepath = str(Path(path)/filename)
+                    files[filepath] = {"type": file_type, "language": language}  # Add to files               
+            else:
+                filename = calculate_filename(file_type, yt_name)    # Calculate the filename
+                filepath = str(Path(path)/filename)
+                files[filepath] = {"type": file_type}                            # Add to files
+
+    return files
 

@@ -13,6 +13,7 @@ import toml
 import logging
 from datetime import datetime
 from pathlib import Path
+from copy import deepcopy
 
 defaults = {                # These are the default global configs if not specified
     "dry_run": False,       # Dry run means don't download automatically
@@ -26,88 +27,78 @@ defaults = {                # These are the default global configs if not specif
 }
 
 config_file = "youmirror.toml"                                      # This is the name for the config file to be used
-valid_options = {"youmirror", "channel", "playlist", "single"}   # These are the valid global options
+valid_options = {"youmirror", "channel", "playlist", "single"}      # These are the valid global options
 valid_yt = {"channel", "playlist", "single"}                        # Valid youtube types for the config
 
-def set_options(option: str, config: dict, options: dict) -> dict:
-    '''
-    Sets the options for the given config parameter from a dictionary
-    '''
-    # TODO this doesn't feel right. I think I should go back to just setting it directly
-    if option in valid_options:                 # If the option is valid
-        for key in options.keys():              # For each key in the options
-            config[option][key] = options[key]  # Set the option to the value
-        return config                           # Return the config
-    else:
-        logging.info(f"Invalid option {option}")
-        return None
-    
-def get_options(option: str, config: dict) -> dict:
+
+def get_globals(config: dict) -> dict:
     '''
     Gets the options for the given config parameter
     '''
-    if option in valid_options:
-        return config[option]
-    else:
-        logging.info(f"Invalid id {option}")
-        return None
-    
-# TODO
-# This can be refactored to utilize one of the other functions but to be totally honest I'm not sure how to do it
-# channel, channel_id, config, dict of settings
-def set_yt(yt: str, id: str, config: dict,  options: dict) -> dict:
+    config = deepcopy(config)   # Copy the config
+    settings = config["youmirror"]
+    return settings
+
+def set_globals(config: dict, settings: dict) -> dict:
     '''
-    Sets the options for the given id
+    Sets the options for the given config parameter from a dictionary
     '''
-    if yt in valid_yt:
-        config[yt][id] = options
+    config = deepcopy(config)
+    config["youmirror"] = settings
+    return config
+
+def get_section(section: str, config: dict):
+    '''
+    Returns the appropriate section thingy
+    '''
+    return deepcopy(config[section])
+
+def get_urls(yt_string: str, config: dict) -> list[str]:
+    '''
+    Gets all the urls for a yt_string
+    '''
+    urls: list[str] = []
+    for id in config[yt_string]:
+        urls.append(config[yt_string][id]["url"])
+    return urls   
+
+
+def yt_exists(yt_string: str, id: str, config: dict) -> bool:
+    '''
+    Returns whether the yt id exists in the config
+    '''
+
+    yt_section = config[yt_string]                  # Get the section "channel, playlist, single"
+    return id in yt_section                         # return if the id is in there
+
+def get_yt(yt_string: str, id: str, config: dict) -> dict:
+    '''
+    Gets the dictionary for the given 
+    '''
+    yt = config[yt_string][id]
+    return yt
+
+def set_yt(yt_string: str, id: str, config: dict, settings) -> None:
+    '''
+    Sets the yt in the config and returns it
+    '''
+    config = deepcopy(config)
+    config[yt_string][id] = settings
+    return config
+
+def remove_yt(yt_string: str, id: str, config: dict) -> dict:
+    '''
+    Removes the id from the appropriate yt section and returns the new config
+    '''
+    try:
+        config = deepcopy(config)       # Copy config for safety
+        yt_section = config[yt_string]  # Get the section "channel", "playlist", "single"
+        if id in yt_section:            # If it's there
+            del config[yt_string][id]   # Delete it
         return config
-    else:
-        logging.error(f"Invalid youtube type {yt}")
-        return None
+    except Exception as e:
+        logging.exception('Could not remove %s, %s from config due to %s', yt_string, id, e)
 
-def get_yt(yt: str, id: str, config: dict) -> dict:
-    '''
-    Sets the options for the given id
-    '''
-    if yt in valid_yt and yt_exists(yt, id, config):    # If we are checking
-        return config[yt][id]
-    else:
-        logging.error(f"Invalid youtube type {yt} or id {id} does not exists")
-        return None
-
-def yt_exists(yt: str, id: str, config: dict) -> bool:
-    '''
-    Checks if the url exists
-    '''
-    if yt in valid_yt:
-        return id in config[yt]
-    else:
-        logging.error(f"Invalid youtube type {yt}")
-        return False
-
-# TODO if yt doesn't exists, set it
-def add_yt(yt: str, id: str, config: dict, options: dict) -> dict:
-    '''
-    Adds the yt id to the config if it doesn't exist
-    '''
-    if not yt_exists(yt, id, config):
-        set_yt(yt, id, config, options)
-        return options
-    else:
-        logging.error(f"id {id} already exists")
-        return None
-
-def remove_yt(yt: str, id: str, config: dict) -> dict:
-    '''
-    Removes yt id from the config if it exists
-    '''
-    if yt_exists(yt, id, config):
-        del config[yt][id]
-        return config
-    else:
-        logging.error(f"Invalid youtube type {yt}")
-    return
 
 def load_config(config_path: str) -> dict:
     '''
@@ -147,8 +138,8 @@ def new_config(config_path: Path, root: str) -> Path:
             from youmirror.template import template         # Import the template dictionary
             name = root                                     # Set the name to the new mirror's root
             created_at = datetime.now().strftime('%Y-%m-%d')# Mark the creation date
-            d = {"name": name, "created_at": created_at}    # New options
-            set_options("youmirror", template, d)           # Save the additional options            
+            info = {"name": name, "created_at": created_at} # New info
+            set_globals(template, info)                     # Save the additional info         
             return save_config(config_path, template)       # Save the config
         else:
             logging.info(f'Config file {config_path} already exists')
