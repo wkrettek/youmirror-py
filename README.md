@@ -7,38 +7,44 @@ You can install from github by using
 
 `pip install git+https://github.com/wkrettek/youmirror.git`
 
-You can also git clone this repository and install with poetry
+If you have `poetry` you can clone this repository and install with
+
+`poetry install --no-dev`
 
 youmirror is intended for python 3.9 and higher
 
 ## Description
 
-There are a lot of sites out there that will let you paste a youtube link and download a youtube video relatively quickly. You can even use pytube to download youtube videos relatively quickly. But writing a script to manage all this downloading is time-consuming and one-offs don't really make a consistent management system. This library is designed to address that issue.
+There are a lot of sites out there that will let you paste a youtube link and download a youtube video relatively quickly. You can even use youtube-dl or pytube to download youtube videos relatively quickly. But writing a script to manage downloading and organizing of whole channels or playlists is time-consuming and one-offs don't really make a consistent management system. This library is designed to address that issue.
 
-With youmirror and the accompanying CLI you can spin up an archive filetree and quickly add videos with a single link!
+With youmirror and the accompanying CLI you can spin up an archive filetree and quickly download videos with a single link!
 
 ## CLI
 
 You can easily interact with youmirror using the command line tool. Create a new mirror with the
-`new` command, optionally specifying the folder.
+`new` command.
 
 `youmirror new [folder]`
 
-You can add to your mirror by using the `add` command with a youtube link. Any youtube link. If you don't specify the folder, it will search the current directory for a config file
+You can add to your mirror by using the `add` command with a youtube link. Any youtube link. With almost all commands you can use the `-m` or `--mirror` option to specify the mirror directory. Otherwise the current directory will be used. You can use the `--no-dl` option if you would like to start tracking the link without downloading any files.
 
-`youmirror add "https://www.youtube.com/watch?v=Pa_HT9vQiLw&t=4s" [folder]`
+`youmirror add "https://www.youtube.com/watch?v=Pa_HT9vQiLw&t=4s" -m [folder] [OPTIONS]`
 
-Conversely you can remove from the mirror with the `remove` command
+Conversely you can remove from the mirror with the `remove` command.
 
-`youmirror remove "https://www.youtube.com/watch?v=Pa_HT9vQiLw&t=4s" [folder]`
+`youmirror remove "https://www.youtube.com/watch?v=Pa_HT9vQiLw&t=4s" -m [folder] [OPTIONS]`
 
 You can view the current state of your mirror with the `show` command
 
-`youmirror show [folder]`
+`youmirror show -m [folder] [OPTIONS]`
 
-youmirror also offers a `sync` command so you can download all the undownloaded videos if your download gets interrupted, or if you don't want to download everything at once. In the future you will be able to do `--update` and check for new videos before syncing
+youmirror also offers a `sync` command that will download all undownloaded videos tracked by the mirror. If your download gets interrupted, or you don't want to download all the videos at once, you can always continue with `youmirror sync`.  You can also specify the `--update` flag to check for new videos before syncing.
 
-`youmirror sync [folder]`
+`youmirror sync -m [folder] [OPTIONS]`
+
+If you add a channel or playlist to your mirror, you can always check for new videos with `youmirror update`. It will find new videos and track them in the mirror without downloading. You can also specify the `--sync` flag to sync after updating.
+
+`youmirror update -m [folder] [OPTIONS]`
 
 ## Organization
 

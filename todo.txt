@@ -1,3 +1,6 @@
+cli 
+    Need to change how the cli accepts urls and directories 
+
 Databaser
     Need to start doing verification checks 
     Wrap up the databasing as much as possible to abstract it from database implementation

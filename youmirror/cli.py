@@ -1,4 +1,4 @@
-__all__ = ['app', 'sync', 'add', 'remove', 'check', 'main', '__main__']
+__all__ = ['app', 'sync', 'add', 'remove', 'check', 'update', 'main', '__main__']
 
 import typer
 from typing import Optional
@@ -13,21 +13,20 @@ def main():
 @app.command()
 def sync(
     url: str = typer.Argument(None, help="Specify the url to sync"),
-    root: str = typer.Argument('.', help="The root directory to sync to, default=\'./\'"),
+    mirror: str = typer.Option('./', *('-m', '--mirror'), help="The mirror directory to sync"),
     update: bool = typer.Option(False, '--update', help="Update the database before syncing"),
     # dry_run : Optional[bool] = typer.Option(default=False, show_choices=False, help="Calculates changes with no execution"),
-    # update :Optional[bool] = typer.Option(False, "--update", help="Updates the mirror before syncing"),
     ):
     '''
     Downloads videos to match the mirror
     '''
     kwargs = {"update": update}
-    ym = YouMirror(root=root)
+    ym = YouMirror(root=mirror)
     ym.sync(url=url, **kwargs)
     return
 
 @app.command()
-def new(root : str = typer.Argument('.')):
+def new(root : str = typer.Argument('.', help="The directory to create the mirror in")):
     '''
     Create a new mirror in the given directory [default:'./']
     '''
@@ -37,8 +36,8 @@ def new(root : str = typer.Argument('.')):
 
 @app.command()
 def add(
-    url : str,
-    root : Optional[str] = typer.Argument('.', help='Root directory for the mirror'),
+    url : str = typer.Argument(None, help="Specify the url to add"),
+    mirror : Optional[str] = typer.Option('./', *('-m', '--mirror'), help='Specify the mirror directory'),
     resolution : Optional[str] = typer.Option("720p", "--resolution", help='Preferred resolution to download'),
     captions: Optional[bool] = typer.Option(False, "--captions", show_default=True, help='Download captions if available'),
     no_video : Optional[bool] = typer.Option(False, "--no-video", show_default=True, help='Don\'t download video'),
@@ -52,21 +51,21 @@ def add(
     Adds the url to the mirror and downloads videos
     '''
     kwargs = {"resolution": resolution, "dl_video": not no_video, "dl_captions": captions, "dl_audio": audio, "dl_thumbnail": thumbnail, "force": force, "dry_run": dry_run, "no_dl": no_dl}
-    ym = YouMirror(root=root)
+    ym = YouMirror(root=mirror)
     ym.add(url, **kwargs)
     return
 
 @app.command()
 def remove(
     url : str,
-    root : Optional[str] = typer.Argument('.', help='Root directory to remove from'),
+    mirror : Optional[str] = typer.Option('./', *('-m', '--mirror'), help='Mirror directory to remove from'),
     no_rm : Optional[bool] = typer.Option(False, "--no-rm", help="Stop tracking without deleting any files")
     ):
     '''
     Removes the url from the mirror and deletes all files
     '''    
     kwargs = {"no_rm": no_rm}
-    ym = YouMirror(root=root)
+    ym = YouMirror(root=mirror)
     ym.remove(url, **kwargs)
 
 # @app.command()
@@ -80,21 +79,25 @@ def remove(
 @app.command()
 def update(
     url : str = typer.Argument(None, help="Specify the url to update"),
-    root : Optional[str] = typer.Argument(default='.', help='Root directory for the mirror'),
+    mirror : Optional[str] = typer.Option('./', *('-m', '--mirror'), help='Root directory for the mirror'),
+    sync : Optional[bool] = typer.Option(False, "--sync", help="Sync the database after updating"),
     ):
     '''
     Updates the mirror when new videos are available
     '''
-    ym = YouMirror(root=root)
-    ym.update(url=url)
+    kwargs = {"sync": sync}
+    ym = YouMirror(root=mirror)
+    ym.update(url=url, **kwargs)
 
 
 @app.command()
-def show(root: str = typer.Argument('.')):
+def show(
+    mirror: str = typer.Option('.', *('-m', '--mirror'), help="The mirror directory to show")
+    ):
     '''
     Shows the state of the mirror
     '''
-    ym = YouMirror(root=root)
+    ym = YouMirror(root=mirror)
     ym.show()
 
 # @app.command()
