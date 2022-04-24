@@ -26,7 +26,7 @@ You can easily interact with youmirror using the command line tool. Create a new
 
 `youmirror new [folder]`
 
-You can add to your mirror by using the `add` command with a youtube link. Any youtube link. With almost all commands you can use the `-m` or `--mirror` option to specify the mirror directory. Otherwise the current directory will be used. You can use the `--no-dl` option if you would like to start tracking the link without downloading any files.
+You can add to your mirror by using the `add` command with a youtube link. Any youtube link. You can use the `--no-dl` option if you would like to start tracking the link without downloading any files. With almost all commands you can use the `-m` or `--mirror` option to specify the mirror directory. Otherwise the current directory will be used. 
 
 `youmirror add "https://www.youtube.com/watch?v=Pa_HT9vQiLw&t=4s" -m [folder] [OPTIONS]`
 
