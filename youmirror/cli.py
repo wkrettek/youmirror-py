@@ -4,7 +4,7 @@ import typer
 from typing import Optional
 from youmirror.core import YouMirror
 
-app = typer.Typer(help="Create a mirror of your favorite youtube videos", add_completion=False)
+app = typer.Typer(help="Create a mirror of your favorite youtube videos", add_completion=True)
 
 def main():
 
@@ -19,7 +19,7 @@ def sync(
     # update :Optional[bool] = typer.Option(False, "--update", help="Updates the mirror before syncing"),
     ):
     '''
-    Checks for new videos and downloads them
+    Downloads videos to match the mirror
     '''
     kwargs = {"update": update}
     ym = YouMirror(root=root)
@@ -38,7 +38,7 @@ def new(root : str = typer.Argument('.')):
 @app.command()
 def add(
     url : str,
-    root : Optional[str] = typer.Argument(default='.', help='Root directory for the mirror'),
+    root : Optional[str] = typer.Argument('.', help='Root directory for the mirror'),
     resolution : Optional[str] = typer.Option("720p", "--resolution", help='Preferred resolution to download'),
     captions: Optional[bool] = typer.Option(False, "--captions", show_default=True, help='Download captions if available'),
     no_video : Optional[bool] = typer.Option(False, "--no-video", show_default=True, help='Don\'t download video'),
@@ -83,7 +83,7 @@ def update(
     root : Optional[str] = typer.Argument(default='.', help='Root directory for the mirror'),
     ):
     '''
-    Checks for new videos without downloading
+    Updates the mirror when new videos are available
     '''
     ym = YouMirror(root=root)
     ym.update(url=url)

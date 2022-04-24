@@ -9,7 +9,7 @@ You can install from github by using
 
 You can also git clone this repository and install with poetry
 
-youmirror is intended for python 3.8 and higher
+youmirror is intended for python 3.9 and higher
 
 ## Description
 

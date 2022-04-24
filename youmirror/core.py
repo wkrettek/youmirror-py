@@ -1,3 +1,10 @@
+from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
+from datetime import datetime   # For marking dates
+import shutil               # For removing whole directories    
+from copy import deepcopy   # For deep copying dictionaries
+import os                   # For calculating directory sizes
+import logging              # Logging
+from typing import Union    # For typing
 import youmirror.downloader as downloader   # Does the downloading
 import youmirror.configurer as configurer   # Manages the config file
 import youmirror.databaser as databaser     # Manages the database
@@ -5,14 +12,7 @@ import youmirror.printer as printer         # Manages printing to the console
 import youmirror.filer as filer             # Manages the filetree
 import youmirror.tuber as tuber             # Manages pytube objects
 from pytube.helpers import safe_filename    # For making good paths & filenames
-import logging              # Logging
-from typing import Union    # For typing
 from pytube import YouTube, Channel, Playlist   # Used for lots of stuff
-from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
-from datetime import datetime   # For marking dates
-import shutil               # For removing whole directories    
-from copy import deepcopy   # For deep copying dictionaries
-import os                   # For calculating directory sizes
 
 '''
 This is the core module
@@ -114,7 +114,7 @@ class YouMirror:
         # Collect the specs
         try:
             name = tuber.get_name(yt)  # Get the name of the pytube object
-            url = tuber.get_url(yt)    # We need to get the url from pytube object in case someone passes a dirty url (like a video from a playlist)                        
+            url = tuber.get_url(yt)    # We need to get the url from the pytube object in case someone passes a dirty url (like a video from a playlist, or a timestamp)                        
             last_updated = datetime.now().strftime('%Y-%m-%d')  # Mark today's date as the last updated
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
