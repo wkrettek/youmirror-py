@@ -1,5 +1,3 @@
-__all__ = ['app', 'sync', 'add', 'remove', 'check', 'update', 'main', '__main__']
-
 import typer
 from typing import Optional
 from youmirror.core import YouMirror

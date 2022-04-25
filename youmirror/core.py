@@ -344,9 +344,9 @@ class YouMirror:
         files_table = databaser.open_table(db_path, "files") # Get the files table
         singles_table = databaser.open_table(db_path, "single") # Get the singles table 
 
-        if url:        
-            if kwargs.get("update"):   # Update if specified
-                self.update(url=url, **kwargs)                                 # If a url is specified, just sync that
+        if url:         # If a url is specified, just sync that
+            if kwargs.get("update"):                                # Update if specified
+                self.update(url=url, **kwargs)                      
             name = tuber.get_name(self.get_pytube(url, self.cache)) # Get name for pretty printing
             files_to_sync = dict()  
             yt_string = tuber.link_type(url)            # Get the type of link
