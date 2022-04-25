@@ -50,7 +50,7 @@ def add(
     '''
     Adds the url to the mirror and downloads videos
     '''
-    kwargs = {"resolution": resolution, "dl_video": not no_video, "dl_captions": captions, "dl_audio": audio, "dl_thumbnail": thumbnail, "force": force, "dry_run": dry_run, "no_dl": no_dl}
+    kwargs = {"resolution": resolution, "dl_video": not no_video, "dl_captions": captions, "dl_audio": audio, "dl_thumbnail": thumbnail, "force": force, "dry_run": '', "no_dl": no_dl}
     ym = YouMirror(root=mirror)
     ym.add(url, **kwargs)
     return
