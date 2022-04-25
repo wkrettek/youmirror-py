@@ -181,7 +181,7 @@ class YouMirror:
             print(f'Downloading will add {download_size} to the mirror')
 
         # Ask for confirmation
-        if not kwargs.get("force", False) or not kwargs.get("no_dl", False):
+        if not kwargs.get("force", False) and not kwargs.get("no_dl", False):
             if input("Continue? (y/n) ") != "y":                    # Get confirmation
                 print("Aborting")
                 return
