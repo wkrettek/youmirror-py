@@ -181,7 +181,7 @@ class YouMirror:
             print(f'Downloading will add {download_size} to the mirror')
 
         # Ask for confirmation
-        if not kwargs.get("force", False) or not kwargs.get("no_dl", False):
+        if not kwargs.get("force", False) and not kwargs.get("no_dl", False):
             if input("Continue? (y/n) ") != "y":                    # Get confirmation
                 print("Aborting")
                 return
@@ -278,7 +278,7 @@ class YouMirror:
         # Calculate changes
         paths_to_remove = set() # Track stuff to remove
         files_to_remove = set()
-        singles_to_remove = set()       
+        singles_to_remove = set()
         singles_table = databaser.open_table(db_path, "single", autocommit=True)   # Open singles table
 
         paths_to_remove.add(remove_path)                # Mark the path for removal
@@ -301,7 +301,7 @@ class YouMirror:
         print(f'removing {len(paths_to_remove)} paths')
         print(f'removing {len(files_to_remove)} files')
 
-        print("Saving changes...")
+        print("Saving changes...", end='')
         # Open databases
         db_path = self.db_path
         files_table = databaser.open_table(db_path, "files", autocommit=True) # Get the files table
@@ -344,9 +344,9 @@ class YouMirror:
         files_table = databaser.open_table(db_path, "files") # Get the files table
         singles_table = databaser.open_table(db_path, "single") # Get the singles table 
 
-        if url:        
-            if kwargs.get("update"):   # Update if specified
-                self.update(url=url, **kwargs)                                 # If a url is specified, just sync that
+        if url:         # If a url is specified, just sync that
+            if kwargs.get("update"):                                # Update if specified
+                self.update(url=url, **kwargs)                      
             name = tuber.get_name(self.get_pytube(url, self.cache)) # Get name for pretty printing
             files_to_sync = dict()  
             yt_string = tuber.link_type(url)            # Get the type of link
@@ -367,7 +367,7 @@ class YouMirror:
                     for filepath in files:                  # Get the files from the files table
                         info = files_table[filepath]        # File dictionary
                         if not info["downloaded"]:          # If not downloaded
-                            files_to_sync[filepath] = info      # Mark for syncing
+                            files_to_sync[filepath] = info  # Mark for syncing
 
             print(f'Syncing {len(files_to_sync)} files')
             for filepath in files_to_sync:
@@ -498,12 +498,14 @@ class YouMirror:
         '''
         Verifies the integrity of the mirror (compare database to config? Walk down or walk up?)
         Wanna pick up untracked things in the database
+        Singles with missing parents, playlists with missing children, etc.
         '''
         return
 
     def show(self) -> None:
         '''
         Prints the current state of the mirror
+        --- This is obviously pretty barebones, a lot could go into formatting this and offering different options
         '''
 
         # Localize our paths so we don't have to type self a bunch of times
@@ -620,8 +622,6 @@ class YouMirror:
             file = files[filepath]
             file["parent"] = url
             file["downloaded"] = False
-            if file["type"] == "video":
-                file["resolution"] = options["resolution"]
             logging.debug((f'Updating file {filepath} with keys {file}'))
         return files
 

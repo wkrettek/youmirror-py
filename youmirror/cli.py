@@ -1,5 +1,3 @@
-__all__ = ['app', 'sync', 'add', 'remove', 'check', 'update', 'main', '__main__']
-
 import typer
 from typing import Optional
 from youmirror.core import YouMirror
@@ -43,14 +41,14 @@ def add(
     no_video : Optional[bool] = typer.Option(False, "--no-video", show_default=True, help='Don\'t download video'),
     audio: Optional[bool] = typer.Option(False, "--audio", show_default=True, help='Download audio separately'),
     thumbnail: Optional[bool] = typer.Option(False, "--thumbnail", show_default=True, help='Download thumbnail'),
-    force : Optional[bool] = typer.Option(False, "--force", help='Force download without asking confirmation'),
-    dry_run : Optional[bool] = typer.Option(False, "--dry-run", help="Calculates changes with no execution"),
-    no_dl : Optional[bool] = typer.Option(False, "--no-dl", help='Like dry-run, but adds the url to the mirror without downloading')
+    force : Optional[bool] = typer.Option(False, *("-f", "--force"), help='Force download without asking confirmation'),
+    # dry_run : Optional[bool] = typer.Option(False, "--dry-run", help="Calculates changes with no execution"),
+    no_dl : Optional[bool] = typer.Option(False, "--no-dl", help='Adds the url to the mirror without downloading')
     ):
     '''
     Adds the url to the mirror and downloads videos
     '''
-    kwargs = {"resolution": resolution, "dl_video": not no_video, "dl_captions": captions, "dl_audio": audio, "dl_thumbnail": thumbnail, "force": force, "dry_run": dry_run, "no_dl": no_dl}
+    kwargs = {"resolution": resolution, "dl_video": not no_video, "dl_captions": captions, "dl_audio": audio, "dl_thumbnail": thumbnail, "force": force, "dry_run": '', "no_dl": no_dl}
     ym = YouMirror(root=mirror)
     ym.add(url, **kwargs)
     return

@@ -73,7 +73,7 @@ def yt_exists(yt_string: str, id: str, config: dict) -> bool:
 
 def get_yt(yt_string: str, id: str, config: dict) -> dict:
     '''
-    Gets the dictionary for the given 
+    Gets the dictionary for the given youtube id
     '''
     yt = config[yt_string][id]
     return yt
