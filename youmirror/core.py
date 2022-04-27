@@ -60,6 +60,9 @@ class YouMirror:
         path = self.path
         config_path = self.config_path
         db_path = self.db_path
+        if self.root in ["", "."]:         # If they don't pass a root, just name it the current directory
+            absolute = Path('.').absolute()
+            self.root = Path(absolute).name
         
         # Create all the necessary files if they don't exist (path, config, db)
         if not path.is_dir():
@@ -102,7 +105,7 @@ class YouMirror:
             if not (id := tuber.link_id(url)):                      # Get the id from the url
                 print(f'Could not parse id from url \'{url}\'')
                 return
-            if configurer.yt_exists(yt_string, id, self.config):    # Check if the link is already in the mirror
+            if configurer.yt_exists(yt_string, url, self.config):    # Check if the link is already in the mirror
                 print(f'url \'{url}\' already exists in the mirror')
                 return
             if not (yt := self.get_pytube(url, self.cache)):     # Get the proper pytube object                    
@@ -118,13 +121,13 @@ class YouMirror:
             last_updated = datetime.now().strftime('%Y-%m-%d')  # Mark today's date as the last updated
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
-        specs = {"name": name, "url": url, "last_updated": last_updated, "resolution" :active_options["resolution"]}
+        specs = {"name": name, "last_updated": last_updated, "resolution" :active_options["resolution"]}
 
         # Add the id to the config
         yt_string = tuber.yt_to_type_string(yt)    # Get the yt type string
         print(f"Adding \'{name}\' to the mirror")
         logging.info(f"Adding {url} to the mirror")
-        self.config = configurer.set_yt(yt_string, id, self.config, specs)
+        self.config = configurer.set_yt(yt_string, url, self.config, specs)
 
         paths_table = databaser.open_table(self.db_path, "paths") # Need this to resolve collisions (only checking paths)
 
@@ -246,7 +249,7 @@ class YouMirror:
         except Exception as e:
             logging.exception('Could not get info for url \'%s\' due to e', url, e)
         # Check if the id is already in the config
-        if configurer.yt_exists(yt_string, id, self.config):
+        if configurer.yt_exists(yt_string, url, self.config):
             print(f'Removing {yt_string} \'{name}\'')
         else:
             print(f"{url} is not in the mirror")
@@ -354,13 +357,14 @@ class YouMirror:
 
             if yt_string in ['channel', 'playlist']:
                 table = databaser.open_table(db_path, yt_string)   # Open a table
-                children = table[url]["children"]                  # Get the children from the db
+                entry = databaser.get_entry(url, table)            # Get the entry
+                children = entry['children']                  # Get the children from the db
                 for child_url in children:
-                    files = singles_table[child_url]["files"]      # Get the children files
+                    files = singles_table[child_url]["files"] # Get the children files
                     for filepath in files:                  # Get the files from the files table
                         info = files_table[filepath]        # File dictionary
                         if not info["downloaded"]:          # If not downloaded
-                            files_to_sync[filepath] = info      # Mark for syncing
+                            files_to_sync[filepath] = info  # Mark for syncing
 
             elif yt_string == 'single':
                     files = singles_table[url]["files"]     # Get the files from the db
@@ -516,28 +520,28 @@ class YouMirror:
         self.config = configurer.load_config(config_path)       # Load the config file
 
         # Print the config
-        channel = self.config['channel']
-        playlist = self.config['playlist']
-        single = self.config["single"]
+        channels = configurer.get_section('channel', self.config)
+        playlists = configurer.get_section('playlist', self.config)
+        singles = configurer.get_section('single', self.config)
         print('TYPE --- NAME --- URL')
         print('-'* 30)
 
-        for yt in channel:
-            item = channel[yt]
+        for yt in channels:
+            item = channels[yt]
             name = item['name']
-            url = item['url']
+            url = yt
             print(f"channel - {name} - {url}")
 
-        for yt in playlist:
-            item = playlist[yt]
+        for yt in playlists:
+            item = playlists[yt]
             name = item['name']
-            url = item['url']
+            url = yt
             print(f"playlist - {name} - {url}")
 
-        for yt in single:
-            item = single[yt]
+        for yt in singles:
+            item = singles[yt]
             name = item['name']
-            url = item['url']
+            url = yt
             print(f"single - {name} - {url}")
 
     def archive(self, root: str) -> None:

@@ -58,8 +58,8 @@ def get_urls(yt_string: str, config: dict) -> list[str]:
     Gets all the urls for a yt_string
     '''
     urls: list[str] = []
-    for id in config[yt_string]:
-        urls.append(config[yt_string][id]["url"])
+    for url in config[yt_string]:
+        urls.append(url)
     return urls   
 
 
@@ -139,7 +139,7 @@ def new_config(config_path: Path, root: str) -> Path:
             name = root                                     # Set the name to the new mirror's root
             created_at = datetime.now().strftime('%Y-%m-%d')# Mark the creation date
             info = {"name": name, "created_at": created_at} # New info
-            set_globals(template, info)                     # Save the additional info         
+            template = set_globals(template, info)            # Save the additional info         
             return save_config(config_path, template)       # Save the config
         else:
             logging.info(f'Config file {config_path} already exists')
