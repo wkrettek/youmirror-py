@@ -1,4 +1,5 @@
 #Builtins
+from distutils.command.config import config
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
 from datetime import datetime   # For marking dates
 import shutil               # For removing whole directories    
@@ -110,25 +111,32 @@ class YouMirror:
             if not (id := tuber.link_id(url)):                      # Get the id from the url
                 print(f'Could not parse id from url \'{url}\'')
                 return
-            if configurer.yt_exists(yt_string, url, self.config):    # Check if the link is already in the mirror
-                print(f'url \'{url}\' already exists in the mirror')
-                return
-            if not (yt := self.get_pytube(url, self.cache)):     # Get the proper pytube object                    
+            if not (yt := self.get_pytube(url, self.cache)):        # Get the proper pytube object                    
                 print(f'Could not parse url \'{url}\'')
                 return
+            if not (url := tuber.get_url(yt)):                      # Sanitize the url
+                return   
+            if configurer.yt_exists(yt_string, url, self.config):   # Check if the link is already in the mirror
+                print(f'url \'{url}\' already exists in the mirror')
+                return
+ 
         except Exception as e:
             logging.exception(f"Could not parse url {url} due to {e}")
 
         # Collect the specs
         try:
-            name = tuber.get_name(yt)  # Get the name of the pytube object
-            url = tuber.get_url(yt)    # We need to get the url from the pytube object in case someone passes a dirty url (like a video from a playlist, or a timestamp)                        
+            name = tuber.get_name(yt)  # Get the name of the pytube object                
             last_updated = datetime.now().strftime('%Y-%m-%d')  # Mark today's date as the last updated
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
-        specs = {"name": name, "last_updated": last_updated, "resolution" :active_options["resolution"]}
 
-        # Add the id to the config
+        # These will be saved to the config for this link
+        specs = {"name": name, "last_updated": last_updated}
+        for spec in ['resolution', 'dl_captions', 'dl_audio', 'dl_video', 'dl_thumbnail']:
+            if kwargs.get(spec, None) is not None:  # If it's specified, record in config
+                specs.update({spec: kwargs.get(spec)})
+
+        # Add the info to the config
         yt_string = tuber.yt_to_type_string(yt)    # Get the yt type string
         print(f"Adding \'{name}\' to the mirror")
         logging.info(f"Adding {url} to the mirror")
@@ -354,15 +362,24 @@ class YouMirror:
         singles_table = databaser.open_table(db_path, "single") # Get the singles table 
 
         if url:         # If a url is specified, just sync that
-            if kwargs.get("update"):                                # Update if specified
+
+            # Get some url info and verify it
+            if not (yt_string := tuber.link_type(url)):            # Get the type of link
+                return
+            yt = self.get_pytube(url, self.cache)       # Get the yt object
+            url = tuber.get_url(yt)                     # Sanitize the url
+            if not configurer.yt_exists(yt_string, url, self.config):# Verify url is in the mirror
+                logging.error("Could not find url %s in the mirror", url)
+            if kwargs.get("update"):                    # Update if specified
                 self.update(url=url, **kwargs)                      
-            name = tuber.get_name(self.get_pytube(url, self.cache)) # Get name for pretty printing
-            files_to_sync = dict()  
-            yt_string = tuber.link_type(url)            # Get the type of link
+            name = tuber.get_name(yt)                   # Get name for pretty printing
+
             print(f"Syncing with {yt_string} \'{name}\'")
 
-            
-            if yt_string in ['channel', 'playlist']:
+            files_to_sync = dict()  
+
+            # Gather files for downloading
+            if yt_string in ['channel', 'playlist']:               # Handling a channel or playlist 
                 table = databaser.open_table(db_path, yt_string)   # Open a table
                 entry = databaser.get_entry(url, table)            # Get the entry
                 children = entry['children']                  # Get the children from the db
@@ -373,7 +390,7 @@ class YouMirror:
                         if not info["downloaded"]:          # If not downloaded
                             files_to_sync[filepath] = info  # Mark for syncing
 
-            elif yt_string == 'single':
+            elif yt_string == 'single':                     # Handling a single
                     files = singles_table[url]["files"]     # Get the files from the db
                     for filepath in files:                  # Get the files from the files table
                         info = files_table[filepath]        # File dictionary
@@ -389,6 +406,8 @@ class YouMirror:
                 file_type = file["type"]                    # Get the file type "video", "audio", etc. 
                 yt = self.get_pytube(parent, self.cache)    # Get the pytube object   
                 print(f"Downloading {file_type} {filepath}")
+                if file["type"] == 'caption':               # If it's a caption record the language to use
+                    active_options['language'] = file['language']
                 if (specs := downloader.download_single(yt, file_type, filepath, active_options)):
                     files_table.update({filepath:specs})     # Save the file specs to the database
                     files_table.commit()                    # Commit the changes to the database
@@ -402,7 +421,7 @@ class YouMirror:
         urls_to_sync = list()
 
         # Collecting urls from config
-        for yt_string in ["channel", "playlist", "single"]: 
+        for yt_string in ["channel", "playlist", "single"]:
             urls_to_sync.extend(configurer.get_urls(yt_string, self.config))
 
         # Syncing every url
@@ -423,25 +442,27 @@ class YouMirror:
         '''
 
         # Localize our paths so we don't have to type self a bunch of times
-        config_path = self.config_path
         db_path = self.db_path
 
+        # Verify and load config and load options
         if not self.verify_config():
             return
         self.load_config()
         active_options = self.load_options(**kwargs)
 
         if url:
-        
+
+            # Get some url info and verify it
+            if not tuber.link_type(url):            # Verify the url
+                return
             yt = self.get_pytube(url, self.cache)   # Get the pytube object
             if tuber.link_type(url) == 'single':    # Singles dont get updated
                 return
             new_children = set(tuber.get_children(yt))  # Get the children urls
             yt_string = tuber.link_type(url)        # Get the type of link
             name = tuber.get_name(yt)               # Get the name for pretty printing
-            if yt_string not in ['channel', 'playlist']:
-                print(f'Cannot update {yt_string} \'{name}\'')
-                return
+            url = tuber.get_url(yt)                 # Sanitize the url
+            active_options.update(configurer.get_yt(yt_string, url, self.config))   # Load the settings for this yt
 
             # Calculate new children
             table = databaser.open_table(db_path, yt_string)    # Open the appropriate table
@@ -473,7 +494,7 @@ class YouMirror:
                 files = self.init_files(files, child_url, active_options)   # Put some initial values
                 files_to_add.update(files)                                  # Mark the files for adding
 
-                new_path = deepcopy(child_keys["path"])                     # Make a copy of the path
+                new_path = child_keys["path"]                               # Make a copy of the path
                 paths_to_add.update({ new_path: {"parent": child_url} })    # Mark it for adding
 
             # Open tables
@@ -500,7 +521,7 @@ class YouMirror:
             urls_to_update.extend(configurer.get_urls(yt_string, self.config))
             
         # Update all the urls
-        for url in urls_to_update:          # TODO this actually breaks and was fixed in a different branch. Needs to update inside the if url: check
+        for url in urls_to_update:
             self.update(url=url, **kwargs)
 
         # Sync if specified
