@@ -328,7 +328,7 @@ class YouMirror:
             databaser.remove_entry(single, singles_table)
 
         # Update config file
-        self.config = configurer.remove_yt(yt_string, id, self.config)  # Remove from the config file
+        self.config = configurer.remove_yt(yt_string, url, self.config)  # Remove from the config file
         configurer.save_config(config_path, self.config)                # Save to config on disk
 
         print("Done!")
@@ -346,6 +346,7 @@ class YouMirror:
             return
         self.load_config()
 
+        # Load the active options
         active_options = self.load_options(**kwargs)
 
         # Open databases
@@ -360,6 +361,7 @@ class YouMirror:
             yt_string = tuber.link_type(url)            # Get the type of link
             print(f"Syncing with {yt_string} \'{name}\'")
 
+            
             if yt_string in ['channel', 'playlist']:
                 table = databaser.open_table(db_path, yt_string)   # Open a table
                 entry = databaser.get_entry(url, table)            # Get the entry
@@ -378,6 +380,7 @@ class YouMirror:
                         if not info["downloaded"]:          # If not downloaded
                             files_to_sync[filepath] = info  # Mark for syncing
 
+            # Download the files
             print(f'Syncing {len(files_to_sync)} files')
             for filepath in files_to_sync:
                 file = files_to_sync[filepath]              # Get the file info

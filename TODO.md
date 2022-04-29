@@ -1,5 +1,9 @@
+### VERSION 0.5.0 (All the stuff we need to do for first release)
+    Configs for a url persist between adding the thing and syncing it
+    Double check that update does the same thing as add
+
 ### core
-    The local config for each url needs to persist between syncs (url's config gets loaded when it syncs)
+    **The local config for each url needs to persist between syncs (url's config gets loaded when it syncs)**
     Generate Keys does some weird stuff that people might not understand
 
 ### printer
