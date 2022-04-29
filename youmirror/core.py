@@ -1,3 +1,4 @@
+#Builtins
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
 from datetime import datetime   # For marking dates
 import shutil               # For removing whole directories    
@@ -5,12 +6,16 @@ from copy import deepcopy   # For deep copying dictionaries
 import os                   # For calculating directory sizes
 import logging              # Logging
 from typing import Union    # For typing
+
+#Youmirror stuff
 import youmirror.downloader as downloader   # Does the downloading
 import youmirror.configurer as configurer   # Manages the config file
 import youmirror.databaser as databaser     # Manages the database
 import youmirror.printer as printer         # Manages printing to the console
 import youmirror.filer as filer             # Manages the filetree
 import youmirror.tuber as tuber             # Manages pytube objects
+
+#Pytube
 from pytube.helpers import safe_filename    # For making good paths & filenames
 from pytube import YouTube, Channel, Playlist   # Used for lots of stuff
 
@@ -435,6 +440,7 @@ class YouMirror:
                 print(f'Cannot update {yt_string} \'{name}\'')
                 return
 
+            # Calculate new children
             table = databaser.open_table(db_path, yt_string)    # Open the appropriate table
             entry = databaser.get_entry(url, table)             # Get the entry from the table
             old_children = set(entry["children"])                    # Get the children from the entry
@@ -442,14 +448,17 @@ class YouMirror:
             print(f'Found {len(difference)} new items for {yt_string} {name}')
             entry["children"] = new_children.union(old_children)     # Update the entry with the new children
 
+            # Record parent's info
             parent_keys = {"parent": url, "parent_name": entry["name"], 
             "parent_type": yt_string, "path": entry["path"]}       # passing in parent info
 
+            # Local dicts to track before committing
             singles_to_add = dict()
             files_to_add = dict()
             paths_to_add = dict()
             paths_table = databaser.open_table(db_path, "paths")   # Open the paths table (to resolve collisions)
 
+            # Calculate info for the new singles
             for child_url in difference:
                 yt = self.get_pytube(child_url, self.cache)                 # Get the pytube object
                 child_keys = self.generate_keys(yt, parent_keys, active_options, paths_table) # Get the keys for the db
@@ -488,7 +497,7 @@ class YouMirror:
             urls_to_update.extend(configurer.get_urls(yt_string, self.config))
             
         # Update all the urls
-        for url in urls_to_update:
+        for url in urls_to_update:          # TODO this actually breaks and was fixed in a different branch. Needs to update inside the if url: check
             self.update(url=url, **kwargs)
 
         # Sync if specified
