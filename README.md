@@ -11,18 +11,17 @@ If you have `poetry` you can clone this repository and install with
 
 `poetry install --no-dev`
 
-youmirror is intended for python 3.9 and higher
+youmirror is intended for **python 3.9** and higher
 
 ## Description
 
-There are a lot of sites out there that will let you paste a youtube link and download a youtube video relatively quickly. You can even use youtube-dl or pytube to download youtube videos relatively quickly. But writing a script to manage downloading and organizing of whole channels or playlists is time-consuming and one-offs don't really make a consistent management system. This library is designed to address that issue.
+So often you will make a playlist of your favorite videos, and as you return to it over the years, some videos will go private or be taken down due to copyright, and they will disappear forever. There are a lot of sites out there that will let you paste a youtube link and download a youtube video relatively quickly. But a lot of times those sites are riddled with ads, or don't offer downloads of high quality videos. There are python libraries out there that will let you download videos, but they just output to one directory by default, and that doesn't make a consistent management system. Or you might forget which videos you already have and you don't want to bother redownloading them. This library is designed to address that issue.
 
-With youmirror and the accompanying CLI you can spin up an archive filetree and quickly download videos with a single link!
+With youmirror and the accompanying CLI you can use any youtube link to add videos to your mirror and easily sync your filetree to what's on the web. Youmirror wil automatically spin up a filetree and organize files so you don't have to.  You can use youmirror to automatically check for new videos on playlists and channels and add them to your mirror. You can specify the quality of videos you want to download and youmirror will skip videos that are already downloaded. Once added, you can easily keep track of what is in your mirror.
 
 ## CLI
 
-You can easily interact with youmirror using the command line tool. Create a new mirror with the
-`new` command.
+You can easily interact with youmirror using the command line tool. Create a new mirror with the `new` command.
 
 `youmirror new [folder]`
 
@@ -65,8 +64,7 @@ youmirror does all the organization and filetree-building so you don't have to. 
                     | -- files
 ```
             
-You may notice that I use the term 'single' to refer to a single youtube video. This is leaning into the fact that there is a lot of information that can be downloaded from a youtube video, including downloading the audio separately, or downloading the captions. Also, singles are youtube videos that were added separately from a playlist or a channel.
-
+You may notice that I use the term 'single' to refer to a single youtube video. This is leaning into the fact that there is a lot of information that can be downloaded from a youtube video, including downloading the audio separately, or downloading the captions. They will all be kept in the same folder for the single. By default, adding the url to the mirror will download the video, but you can use different flags like `--captions` when adding the url mirror to also download captions.
 
 ## Downloading
 
