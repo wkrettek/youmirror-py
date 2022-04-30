@@ -1,5 +1,4 @@
 #Builtins
-from distutils.command.config import config
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
 from datetime import datetime   # For marking dates
 import shutil               # For removing whole directories    
@@ -94,7 +93,7 @@ class YouMirror:
 
         # Config setup
         if not self.verify_config():
-            return
+            return False
         self.load_config()
 
         # Load the options from config
@@ -107,21 +106,21 @@ class YouMirror:
         try:
             if not (yt_string := tuber.link_type(url)):             # Get the url type (channel, playlist, single)
                 print(f"Invalid url \'{url}\'")
-                return
+                return False
             if not (id := tuber.link_id(url)):                      # Get the id from the url
                 print(f'Could not parse id from url \'{url}\'')
-                return
+                return False
             if not (yt := self.get_pytube(url, self.cache)):        # Get the proper pytube object                    
                 print(f'Could not parse url \'{url}\'')
-                return
+                return False
             if not (url := tuber.get_url(yt)):                      # Sanitize the url
                 return   
             if configurer.yt_exists(yt_string, url, self.config):   # Check if the link is already in the mirror
                 print(f'url \'{url}\' already exists in the mirror')
-                return
- 
+                return False
         except Exception as e:
             logging.exception(f"Could not parse url {url} due to {e}")
+            return False
 
         # Collect the specs
         try:
@@ -252,15 +251,20 @@ class YouMirror:
         if not self.verify_config():
             return
         self.load_config()
-        # Parse the url & create pytube object  ----- TODO probably don't need to get pytube involved
         try:
-            yt_string = tuber.link_type(url)                # Get the url type (channel, playlist, single)
-            id = tuber.link_id(url)                         # Get the id from the link
-            yt = self.get_pytube(url, self.cache)           # Get the proper pytube object
-            url = tuber.get_url(yt)                         # Need to get url from pytube in case user passed a dirty one
-            name = tuber.get_name(yt)
+            if not (yt_string := tuber.link_type(url)):                # Get the url type (channel, playlist, single)
+                return False
+            if not (id := tuber.link_id(url)):                         # Get the id from the link
+                return False
+            if not (yt := self.get_pytube(url, self.cache)):           # Get the proper pytube object
+                return False
+            if not (url := tuber.get_url(yt)):                         # Need to get url from pytube in case user passed a dirty one
+                return False
+            if not (name := tuber.get_name(yt)):
+                return False
         except Exception as e:
-            logging.exception('Could not get info for url \'%s\' due to e', url, e)
+            logging.exception('Could not get info for url \'%s\' due to %s', url, e)
+            return False
         # Check if the id is already in the config
         if configurer.yt_exists(yt_string, url, self.config):
             print(f'Removing {yt_string} \'{name}\'')
@@ -365,11 +369,14 @@ class YouMirror:
 
             # Get some url info and verify it
             if not (yt_string := tuber.link_type(url)):            # Get the type of link
-                return
-            yt = self.get_pytube(url, self.cache)       # Get the yt object
-            url = tuber.get_url(yt)                     # Sanitize the url
+                return False
+            if not (yt := self.get_pytube(url, self.cache)):       # Get the yt object
+                return False
+            if not (url := tuber.get_url(yt)):                     # Sanitize the url
+                return False
             if not configurer.yt_exists(yt_string, url, self.config):# Verify url is in the mirror
                 logging.error("Could not find url %s in the mirror", url)
+                return False
             if kwargs.get("update"):                    # Update if specified
                 self.update(url=url, **kwargs)                      
             name = tuber.get_name(yt)                   # Get name for pretty printing
@@ -454,12 +461,15 @@ class YouMirror:
 
             # Get some url info and verify it
             if not tuber.link_type(url):            # Verify the url
-                return
-            yt = self.get_pytube(url, self.cache)   # Get the pytube object
+                return False
+            if not (yt := self.get_pytube(url, self.cache)):   # Get the pytube object
+                return False
             if tuber.link_type(url) == 'single':    # Singles dont get updated
-                return
-            new_children = set(tuber.get_children(yt))  # Get the children urls
-            yt_string = tuber.link_type(url)        # Get the type of link
+                return False
+            if not (new_children := set(tuber.get_children(yt))):  # Get the children urls
+                return False
+            if not (yt_string := tuber.link_type(url)):        # Get the type of link
+                return False
             name = tuber.get_name(yt)               # Get the name for pretty printing
             url = tuber.get_url(yt)                 # Sanitize the url
             active_options.update(configurer.get_yt(yt_string, url, self.config))   # Load the settings for this yt

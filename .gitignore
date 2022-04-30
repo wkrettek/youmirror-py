@@ -137,3 +137,6 @@ youmirror.toml
 *.mp4
 *.jpg
 *.srt
+
+# mac files
+.DS_Store

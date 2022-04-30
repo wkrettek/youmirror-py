@@ -27,6 +27,7 @@
     Still getting xml errors when converting captions. I need to do this in-house
         Maybe xml captions could be a download option? idk
     Catch common issues like Too many requests error
+    We can bypass age restrictions but it requires user to login. Long term goal
 
 ### Verifier
     Verify the config against the database
