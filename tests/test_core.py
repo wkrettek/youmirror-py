@@ -30,21 +30,23 @@ def test_invalid_urls():
             assert func(url) == False               # Verify using the invalid url returns False
 
 # Just add and remove a single and verify there is no crash
-def test_add_remove_single():
+def test_add_sync_remove_single():
     '''
-    Adds a single and removes it
+    Adds a single, syncs it, and removes it
     '''
     # Add a single
     try:
         # Force add for speed
         ym.add("https://www.youtube.com/watch?v=6NQHtVrP3gE", **{"no_dl": True, "force": True})
-    except:
-        pytest.fail("Could not add single")
-    # Remove it
-    try:
-        # Force remove for speed
+        ym.sync("https://www.youtube.com/watch?v=6NQHtVrP3gE")
         ym.remove("https://www.youtube.com/watch?v=6NQHtVrP3gE", **{'no_rm': True, 'force': True})
-    except:
-        pytest.fail("Could not remove single")
-    
-    return
+    except Exception as e:
+        pytest.fail("Failed due to %s", e)
+
+# Cleanup
+def test_cleanup():
+    '''
+    Cleanup
+    '''
+    Path(databaser.db_file).unlink()
+    Path(configurer.config_file).unlink()

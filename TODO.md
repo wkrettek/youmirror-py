@@ -1,5 +1,4 @@
 ### VERSION 0.5.0 (All the stuff we need to do for first release)
-    Configs for a url persist between adding the thing and syncing it
     Double check that update does the same thing as add
 
 ### core

@@ -404,6 +404,9 @@ class YouMirror:
                         if not info["downloaded"]:          # If not downloaded
                             files_to_sync[filepath] = info  # Mark for syncing
 
+            # Update options for this url
+            active_options.update(configurer.get_yt(yt_string, url, self.config))
+
             # Download the files
             print(f'Syncing {len(files_to_sync)} files')
             for filepath in files_to_sync:
@@ -729,7 +732,9 @@ class YouMirror:
         active_options = configurer.defaults                                # Load default options
         global_options = configurer.get_globals(self.config)                # Get global options
         active_options.update(global_options)                               # Overwrite with globals
-        active_options.update(kwargs)                                       # Overwrite with command line options
+        for key in kwargs:
+            if kwargs.get(key) is not None:                                    # If the value is not None, update the config
+                active_options.update({key: kwargs.get(key)})
         active_options["has_ffmpeg"] = shutil.which("ffmpeg") is not None   # Record whether they have ffmpeg
         if active_options["resolution"] not in downloader.resolutions:
             logging.error(f"Invalid resolution \'{active_options['resolution']}\', valid resolutions = {downloader.resolutions}")                                      # Validate resolution
