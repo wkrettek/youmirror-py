@@ -419,7 +419,8 @@ class YouMirror:
                 if file["type"] == 'caption':               # If it's a caption record the language to use
                     active_options['language'] = file['language']
                 if (specs := downloader.download_single(yt, file_type, filepath, active_options)):
-                    files_table.update({filepath:specs})     # Save the file specs to the database
+                    file.update(specs)                      # Update the file info with the specs
+                    files_table.update({filepath: file})    # Save the file info to the database
                     files_table.commit()                    # Commit the changes to the database
                 else:
                     print(f'Could not download {file_type} {filename}')
