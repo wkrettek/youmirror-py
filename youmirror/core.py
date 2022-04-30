@@ -1,3 +1,4 @@
+#Builtins
 from pathlib import Path    # Helpful for ensuring text inputs translate well to real directories
 from datetime import datetime   # For marking dates
 import shutil               # For removing whole directories    
@@ -5,12 +6,16 @@ from copy import deepcopy   # For deep copying dictionaries
 import os                   # For calculating directory sizes
 import logging              # Logging
 from typing import Union    # For typing
+
+#Youmirror stuff
 import youmirror.downloader as downloader   # Does the downloading
 import youmirror.configurer as configurer   # Manages the config file
 import youmirror.databaser as databaser     # Manages the database
 import youmirror.printer as printer         # Manages printing to the console
 import youmirror.filer as filer             # Manages the filetree
 import youmirror.tuber as tuber             # Manages pytube objects
+
+#Pytube
 from pytube.helpers import safe_filename    # For making good paths & filenames
 from pytube import YouTube, Channel, Playlist   # Used for lots of stuff
 
@@ -60,6 +65,9 @@ class YouMirror:
         path = self.path
         config_path = self.config_path
         db_path = self.db_path
+        if self.root in ["", "."]:         # If they don't pass a root, just name it the current directory
+            absolute = Path('.').absolute()
+            self.root = Path(absolute).name
         
         # Create all the necessary files if they don't exist (path, config, db)
         if not path.is_dir():
@@ -85,7 +93,7 @@ class YouMirror:
 
         # Config setup
         if not self.verify_config():
-            return
+            return False
         self.load_config()
 
         # Load the options from config
@@ -98,33 +106,40 @@ class YouMirror:
         try:
             if not (yt_string := tuber.link_type(url)):             # Get the url type (channel, playlist, single)
                 print(f"Invalid url \'{url}\'")
-                return
+                return False
             if not (id := tuber.link_id(url)):                      # Get the id from the url
                 print(f'Could not parse id from url \'{url}\'')
-                return
-            if configurer.yt_exists(yt_string, id, self.config):    # Check if the link is already in the mirror
-                print(f'url \'{url}\' already exists in the mirror')
-                return
-            if not (yt := self.get_pytube(url, self.cache)):     # Get the proper pytube object                    
+                return False
+            if not (yt := self.get_pytube(url, self.cache)):        # Get the proper pytube object                    
                 print(f'Could not parse url \'{url}\'')
-                return
+                return False
+            if not (url := tuber.get_url(yt)):                      # Sanitize the url
+                return   
+            if configurer.yt_exists(yt_string, url, self.config):   # Check if the link is already in the mirror
+                print(f'url \'{url}\' already exists in the mirror')
+                return False
         except Exception as e:
             logging.exception(f"Could not parse url {url} due to {e}")
+            return False
 
         # Collect the specs
         try:
-            name = tuber.get_name(yt)  # Get the name of the pytube object
-            url = tuber.get_url(yt)    # We need to get the url from the pytube object in case someone passes a dirty url (like a video from a playlist, or a timestamp)                        
+            name = tuber.get_name(yt)  # Get the name of the pytube object                
             last_updated = datetime.now().strftime('%Y-%m-%d')  # Mark today's date as the last updated
         except Exception as e:
             logging.exception(f"Failed to collect specs from url error: {e}")
-        specs = {"name": name, "url": url, "last_updated": last_updated, "resolution" :active_options["resolution"]}
 
-        # Add the id to the config
+        # These will be saved to the config for this link
+        specs = {"name": name, "last_updated": last_updated}
+        for spec in ['resolution', 'dl_captions', 'dl_audio', 'dl_video', 'dl_thumbnail']:
+            if kwargs.get(spec, None) is not None:  # If it's specified, record in config
+                specs.update({spec: kwargs.get(spec)})
+
+        # Add the info to the config
         yt_string = tuber.yt_to_type_string(yt)    # Get the yt type string
         print(f"Adding \'{name}\' to the mirror")
         logging.info(f"Adding {url} to the mirror")
-        self.config = configurer.set_yt(yt_string, id, self.config, specs)
+        self.config = configurer.set_yt(yt_string, url, self.config, specs)
 
         paths_table = databaser.open_table(self.db_path, "paths") # Need this to resolve collisions (only checking paths)
 
@@ -236,17 +251,22 @@ class YouMirror:
         if not self.verify_config():
             return
         self.load_config()
-        # Parse the url & create pytube object  ----- TODO probably don't need to get pytube involved
         try:
-            yt_string = tuber.link_type(url)                # Get the url type (channel, playlist, single)
-            id = tuber.link_id(url)                         # Get the id from the link
-            yt = self.get_pytube(url, self.cache)           # Get the proper pytube object
-            url = tuber.get_url(yt)                         # Need to get url from pytube in case user passed a dirty one
-            name = tuber.get_name(yt)
+            if not (yt_string := tuber.link_type(url)):                # Get the url type (channel, playlist, single)
+                return False
+            if not (id := tuber.link_id(url)):                         # Get the id from the link
+                return False
+            if not (yt := self.get_pytube(url, self.cache)):           # Get the proper pytube object
+                return False
+            if not (url := tuber.get_url(yt)):                         # Need to get url from pytube in case user passed a dirty one
+                return False
+            if not (name := tuber.get_name(yt)):
+                return False
         except Exception as e:
-            logging.exception('Could not get info for url \'%s\' due to e', url, e)
+            logging.exception('Could not get info for url \'%s\' due to %s', url, e)
+            return False
         # Check if the id is already in the config
-        if configurer.yt_exists(yt_string, id, self.config):
+        if configurer.yt_exists(yt_string, url, self.config):
             print(f'Removing {yt_string} \'{name}\'')
         else:
             print(f"{url} is not in the mirror")
@@ -320,7 +340,7 @@ class YouMirror:
             databaser.remove_entry(single, singles_table)
 
         # Update config file
-        self.config = configurer.remove_yt(yt_string, id, self.config)  # Remove from the config file
+        self.config = configurer.remove_yt(yt_string, url, self.config)  # Remove from the config file
         configurer.save_config(config_path, self.config)                # Save to config on disk
 
         print("Done!")
@@ -338,6 +358,7 @@ class YouMirror:
             return
         self.load_config()
 
+        # Load the active options
         active_options = self.load_options(**kwargs)
 
         # Open databases
@@ -345,30 +366,48 @@ class YouMirror:
         singles_table = databaser.open_table(db_path, "single") # Get the singles table 
 
         if url:         # If a url is specified, just sync that
-            if kwargs.get("update"):                                # Update if specified
+
+            # Get some url info and verify it
+            if not (yt_string := tuber.link_type(url)):            # Get the type of link
+                return False
+            if not (yt := self.get_pytube(url, self.cache)):       # Get the yt object
+                return False
+            if not (url := tuber.get_url(yt)):                     # Sanitize the url
+                return False
+            if not configurer.yt_exists(yt_string, url, self.config):# Verify url is in the mirror
+                logging.error("Could not find url %s in the mirror", url)
+                return False
+            if kwargs.get("update"):                    # Update if specified
                 self.update(url=url, **kwargs)                      
-            name = tuber.get_name(self.get_pytube(url, self.cache)) # Get name for pretty printing
-            files_to_sync = dict()  
-            yt_string = tuber.link_type(url)            # Get the type of link
+            name = tuber.get_name(yt)                   # Get name for pretty printing
+
             print(f"Syncing with {yt_string} \'{name}\'")
 
-            if yt_string in ['channel', 'playlist']:
+            files_to_sync = dict()  
+
+            # Gather files for downloading
+            if yt_string in ['channel', 'playlist']:               # Handling a channel or playlist 
                 table = databaser.open_table(db_path, yt_string)   # Open a table
-                children = table[url]["children"]                  # Get the children from the db
+                entry = databaser.get_entry(url, table)            # Get the entry
+                children = entry['children']                  # Get the children from the db
                 for child_url in children:
-                    files = singles_table[child_url]["files"]      # Get the children files
+                    files = singles_table[child_url]["files"] # Get the children files
                     for filepath in files:                  # Get the files from the files table
                         info = files_table[filepath]        # File dictionary
                         if not info["downloaded"]:          # If not downloaded
-                            files_to_sync[filepath] = info      # Mark for syncing
+                            files_to_sync[filepath] = info  # Mark for syncing
 
-            elif yt_string == 'single':
+            elif yt_string == 'single':                     # Handling a single
                     files = singles_table[url]["files"]     # Get the files from the db
                     for filepath in files:                  # Get the files from the files table
                         info = files_table[filepath]        # File dictionary
                         if not info["downloaded"]:          # If not downloaded
                             files_to_sync[filepath] = info  # Mark for syncing
 
+            # Update options for this url
+            active_options.update(configurer.get_yt(yt_string, url, self.config))
+
+            # Download the files
             print(f'Syncing {len(files_to_sync)} files')
             for filepath in files_to_sync:
                 file = files_to_sync[filepath]              # Get the file info
@@ -377,8 +416,11 @@ class YouMirror:
                 file_type = file["type"]                    # Get the file type "video", "audio", etc. 
                 yt = self.get_pytube(parent, self.cache)    # Get the pytube object   
                 print(f"Downloading {file_type} {filepath}")
+                if file["type"] == 'caption':               # If it's a caption record the language to use
+                    active_options['language'] = file['language']
                 if (specs := downloader.download_single(yt, file_type, filepath, active_options)):
-                    files_table.update({filepath:specs})     # Save the file specs to the database
+                    file.update(specs)                      # Update the file info with the specs
+                    files_table.update({filepath: file})    # Save the file info to the database
                     files_table.commit()                    # Commit the changes to the database
                 else:
                     print(f'Could not download {file_type} {filename}')
@@ -390,7 +432,7 @@ class YouMirror:
         urls_to_sync = list()
 
         # Collecting urls from config
-        for yt_string in ["channel", "playlist", "single"]: 
+        for yt_string in ["channel", "playlist", "single"]:
             urls_to_sync.extend(configurer.get_urls(yt_string, self.config))
 
         # Syncing every url
@@ -411,26 +453,32 @@ class YouMirror:
         '''
 
         # Localize our paths so we don't have to type self a bunch of times
-        config_path = self.config_path
         db_path = self.db_path
 
+        # Verify and load config and load options
         if not self.verify_config():
             return
         self.load_config()
         active_options = self.load_options(**kwargs)
 
         if url:
-        
-            yt = self.get_pytube(url, self.cache)   # Get the pytube object
-            if tuber.link_type(url) == 'single':    # Singles dont get updated
-                return
-            new_children = set(tuber.get_children(yt))  # Get the children urls
-            yt_string = tuber.link_type(url)        # Get the type of link
-            name = tuber.get_name(yt)               # Get the name for pretty printing
-            if yt_string not in ['channel', 'playlist']:
-                print(f'Cannot update {yt_string} \'{name}\'')
-                return
 
+            # Get some url info and verify it
+            if not tuber.link_type(url):            # Verify the url
+                return False
+            if not (yt := self.get_pytube(url, self.cache)):   # Get the pytube object
+                return False
+            if tuber.link_type(url) == 'single':    # Singles dont get updated
+                return False
+            if not (new_children := set(tuber.get_children(yt))):  # Get the children urls
+                return False
+            if not (yt_string := tuber.link_type(url)):        # Get the type of link
+                return False
+            name = tuber.get_name(yt)               # Get the name for pretty printing
+            url = tuber.get_url(yt)                 # Sanitize the url
+            active_options.update(configurer.get_yt(yt_string, url, self.config))   # Load the settings for this yt
+
+            # Calculate new children
             table = databaser.open_table(db_path, yt_string)    # Open the appropriate table
             entry = databaser.get_entry(url, table)             # Get the entry from the table
             old_children = set(entry["children"])                    # Get the children from the entry
@@ -438,14 +486,17 @@ class YouMirror:
             print(f'Found {len(difference)} new items for {yt_string} {name}')
             entry["children"] = new_children.union(old_children)     # Update the entry with the new children
 
+            # Record parent's info
             parent_keys = {"parent": url, "parent_name": entry["name"], 
             "parent_type": yt_string, "path": entry["path"]}       # passing in parent info
 
+            # Local dicts to track before committing
             singles_to_add = dict()
             files_to_add = dict()
             paths_to_add = dict()
             paths_table = databaser.open_table(db_path, "paths")   # Open the paths table (to resolve collisions)
 
+            # Calculate info for the new singles
             for child_url in difference:
                 yt = self.get_pytube(child_url, self.cache)                 # Get the pytube object
                 child_keys = self.generate_keys(yt, parent_keys, active_options, paths_table) # Get the keys for the db
@@ -457,7 +508,7 @@ class YouMirror:
                 files = self.init_files(files, child_url, active_options)   # Put some initial values
                 files_to_add.update(files)                                  # Mark the files for adding
 
-                new_path = deepcopy(child_keys["path"])                     # Make a copy of the path
+                new_path = child_keys["path"]                               # Make a copy of the path
                 paths_to_add.update({ new_path: {"parent": child_url} })    # Mark it for adding
 
             # Open tables
@@ -516,28 +567,28 @@ class YouMirror:
         self.config = configurer.load_config(config_path)       # Load the config file
 
         # Print the config
-        channel = self.config['channel']
-        playlist = self.config['playlist']
-        single = self.config["single"]
+        channels = configurer.get_section('channel', self.config)
+        playlists = configurer.get_section('playlist', self.config)
+        singles = configurer.get_section('single', self.config)
         print('TYPE --- NAME --- URL')
         print('-'* 30)
 
-        for yt in channel:
-            item = channel[yt]
+        for yt in channels:
+            item = channels[yt]
             name = item['name']
-            url = item['url']
+            url = yt
             print(f"channel - {name} - {url}")
 
-        for yt in playlist:
-            item = playlist[yt]
+        for yt in playlists:
+            item = playlists[yt]
             name = item['name']
-            url = item['url']
+            url = yt
             print(f"playlist - {name} - {url}")
 
-        for yt in single:
-            item = single[yt]
+        for yt in singles:
+            item = singles[yt]
             name = item['name']
-            url = item['url']
+            url = yt
             print(f"single - {name} - {url}")
 
     def archive(self, root: str) -> None:
@@ -682,7 +733,9 @@ class YouMirror:
         active_options = configurer.defaults                                # Load default options
         global_options = configurer.get_globals(self.config)                # Get global options
         active_options.update(global_options)                               # Overwrite with globals
-        active_options.update(kwargs)                                       # Overwrite with command line options
+        for key in kwargs:
+            if kwargs.get(key) is not None:                                    # If the value is not None, update the config
+                active_options.update({key: kwargs.get(key)})
         active_options["has_ffmpeg"] = shutil.which("ffmpeg") is not None   # Record whether they have ffmpeg
         if active_options["resolution"] not in downloader.resolutions:
             logging.error(f"Invalid resolution \'{active_options['resolution']}\', valid resolutions = {downloader.resolutions}")                                      # Validate resolution

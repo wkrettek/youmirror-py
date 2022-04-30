@@ -19,6 +19,7 @@ youmirror = 'youmirror.cli:main'
 [tool.poetry.dev-dependencies]
 ipykernel = "^6.13.0"
 black = "^22.3.0"
+pytest = "^7.1.2"
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"

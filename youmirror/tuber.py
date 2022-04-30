@@ -4,6 +4,7 @@ pulls information from pytube objects
 ---
 '''
 from pytube import YouTube, Channel, Playlist, extract
+from pytube.exceptions import RegexMatchError
 from typing import Union
 import logging
 
@@ -77,6 +78,9 @@ def new_pytube(url: str) -> Union[YouTube, Channel, Playlist]:
     try:
         object = wrap_url(url, objects[url_type])   # Wrap the url in the proper pytube object
         return object
+    except RegexMatchError:
+        logging.error('Regex Error: could not find matching video for url %s', url)
+        return None
     except Exception as e:
         logging.exception(f"Failed to parse Youtube link due to {e}")
         return None         # This indicates something went wrong, but we will handle it above

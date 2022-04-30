@@ -127,6 +127,7 @@ def calculate_filesize(yt: YouTube, file_type: str, options: dict) -> int:
 def download_stream(stream: Stream, path: str, filename: str, options: dict) -> bool:
     '''
     Downloads to the given filepath and returns if a new file was downloaded or not
+    TODO would be nice if the download only wrote to file on complete (maybe suggest to pytube)
     '''
     stream.download(output_path=path, filename=filename) # Download to the appropriate path and name
     return True
@@ -163,7 +164,7 @@ def download_caption(yt: YouTube, path: str, filename: str, options: dict) -> di
     '''
     # TODO handle for different languages
     try:
-        caption_type = options["caption_type"]  # Language was injected from above
+        caption_type = options["language"]  # Language was injected from above
         captions = yt.captions            # Get the captions
         for caption in captions:         # Iterate through the captions
             if caption.code == caption_type:    # If the caption is the language we want

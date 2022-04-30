@@ -37,10 +37,10 @@ def add(
     url : str = typer.Argument(None, help="Specify the url to add"),
     mirror : Optional[str] = typer.Option('./', *('-m', '--mirror'), help='Specify the mirror directory'),
     resolution : Optional[str] = typer.Option("720p", "--resolution", help='Preferred resolution to download'),
-    captions: Optional[bool] = typer.Option(False, "--captions", show_default=True, help='Download captions if available'),
-    no_video : Optional[bool] = typer.Option(False, "--no-video", show_default=True, help='Don\'t download video'),
-    audio: Optional[bool] = typer.Option(False, "--audio", show_default=True, help='Download audio separately'),
-    thumbnail: Optional[bool] = typer.Option(False, "--thumbnail", show_default=True, help='Download thumbnail'),
+    captions: Optional[bool] = typer.Option(None, "--captions", show_default=True, help='Download captions if available'),
+    no_video : Optional[bool] = typer.Option(None, "--no-video", show_default=True, help='Don\'t download video'),
+    audio: Optional[bool] = typer.Option(None, "--audio", show_default=True, help='Download audio separately'),
+    thumbnail: Optional[bool] = typer.Option(None, "--thumbnail", show_default=True, help='Download thumbnail'),
     force : Optional[bool] = typer.Option(False, *("-f", "--force"), help='Force download without asking confirmation'),
     # dry_run : Optional[bool] = typer.Option(False, "--dry-run", help="Calculates changes with no execution"),
     no_dl : Optional[bool] = typer.Option(False, "--no-dl", help='Adds the url to the mirror without downloading')
@@ -48,7 +48,10 @@ def add(
     '''
     Adds the url to the mirror and downloads videos
     '''
-    kwargs = {"resolution": resolution, "dl_video": not no_video, "dl_captions": captions, "dl_audio": audio, "dl_thumbnail": thumbnail, "force": force, "dry_run": '', "no_dl": no_dl}
+    video = None
+    if no_video:    # Initializing dl_video
+        video = not no_video
+    kwargs = {"resolution": resolution, "dl_video": video, "dl_captions": captions, "dl_audio": audio, "dl_thumbnail": thumbnail, "force": force, "dry_run": '', "no_dl": no_dl}
     ym = YouMirror(root=mirror)
     ym.add(url, **kwargs)
     return
