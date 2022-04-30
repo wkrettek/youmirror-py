@@ -64,7 +64,7 @@ youmirror does all the organization and filetree-building so you don't have to. 
                     | -- files
 ```
             
-You may notice that I use the term 'single' to refer to a single youtube video. This is leaning into the fact that there is a lot of information that can be downloaded from a youtube video, including downloading the audio separately, or downloading the captions. They will all be kept in the same folder for the single. By default, adding the url to the mirror will download the video, but you can use different flags like `--captions` when adding the url mirror to also download captions.
+You may notice that I use the term 'single' to refer to a single youtube video. This is leaning into the fact that there is a lot of information that can be downloaded from a youtube video, including downloading the audio separately, or downloading the captions. They will all be kept in the same folder for the single. By default, adding the url to the mirror will download the video, but you can use different flags like `--captions` when adding the url to also download captions.
 
 ## Downloading
 
