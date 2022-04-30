@@ -80,20 +80,21 @@ Similar to poetry, youmirror uses a .toml config file to keep track of what's in
 ```
 [youmirror]
 name = "new_mirror"
-created_at = "2022-04-16"
+created_at = "2022-04-29"
 
-[channel]
+[channel."http://www.youtube.com/c/suckerpinch"]
+name = "suckerpinch"
+last_updated = "2022-04-29"
+resolution = "1080p"
 
-[playlist.PLBZw8Bdva63UAhbdAlbbYotegKhUMeSzN]
+[playlist."https://www.youtube.com/playlist?list=PLBZw8Bdva63UAhbdAlbbYotegKhUMeSzN"]
 name = "Pepe Prawn"
-url = "https://www.youtube.com/playlist?list=PLBZw8Bdva63UAhbdAlbbYotegKhUMeSzN"
+last_updated = "2022-04-29"
+resolution = "720p"
 
-[single.FWFQn6o4FfY]
+[single."https://youtube.com/watch?v=FWFQn6o4FfY"]
 name = "MIB3 - The Will Smith Slap"
-url = "https://youtube.com/watch?v=FWFQn6o4FfY"
-
-[single.1MbvNXZL5f0]
-name = "Bill Hader in Men In Black 3"
-url = "https://youtube.com/watch?v=1MbvNXZL5f0"
+last_updated = "2022-04-29"
+resolution = "720p"
 ```
 
