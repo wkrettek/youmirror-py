@@ -1,14 +1,11 @@
-### VERSION 0.5.0 (All the stuff we need to do for first release)
-    Double check that update does the same thing as add
-
 ### core
-    **The local config for each url needs to persist between syncs (url's config gets loaded when it syncs)**
+    In sync and update we wanna get all the urls up front and work through the array, instead of doing it recursively
+    keep tables open thoughout the instance?
     Generate Keys does some weird stuff that people might not understand
 
 ### printer
-    Figure out how to put stuff in columns
-    Add Color
-    [1] show name, type, url, num children, size
+    Put stuff in justified columns
+    When downloading, try to keep stuff on one line
 
 ### Visualization
     Need good ways to view what's in the database
