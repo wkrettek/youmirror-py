@@ -277,6 +277,7 @@ class YouMirror:
         entry = databaser.get_entry(url, table) # Get the keys for the db entry
         databaser.close_table(table)            # Close for now
         remove_path = entry["path"]             # Get the path
+        remove_path = str(self.path/Path(remove_path))  # Add the root to the path
 
         # Calculate the size of the directory
         if not kwargs.get("no_rm", False):
@@ -418,6 +419,7 @@ class YouMirror:
                 print(f"Downloading {file_type} {filepath}")
                 if file["type"] == 'caption':               # If it's a caption record the language to use
                     active_options['language'] = file['language']
+                filepath = str(self.path/Path(filepath))    # Add the root to the filepath
                 if (specs := downloader.download_single(yt, file_type, filepath, active_options)):
                     file.update(specs)                      # Update the file info with the specs
                     files_table.update({filepath: file})    # Save the file info to the database
