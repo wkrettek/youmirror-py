@@ -2,15 +2,15 @@
 This module is for pretty printing on the output
 '''
 _colors = {
-    "HEADER" : '\033[95m',
-    "OKBLUE" : '\033[94m',
-    "OKCYAN" : '\033[96m',
-    "OKGREEN" : '\033[92m',
-    "WARNING" : '\033[93m',
-    "FAIL" : '\033[91m',
-    "ENDC" : '\033[0m',
-    "BOLD" : '\033[1m',
-    "UNDERLINE" : '\033[4m'
+    "header" : '\033[95m',
+    "blue" : '\033[94m',
+    "cyan" : '\033[96m',
+    "green" : '\033[92m',
+    "yellow" : '\033[93m',
+    "red" : '\033[91m',
+    "endc" : '\033[0m',
+    "bold" : '\033[1m',
+    "underline" : '\033[4m'
 }
 
 
@@ -28,4 +28,4 @@ def color(s: str, color: str):
     '''
     Takes the text and wraps it in the chosen format
     '''
-    return _colors[color] + s
+    return _colors[color] + s + _colors['endc']

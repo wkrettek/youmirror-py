@@ -2,10 +2,17 @@
     In sync and update we wanna get all the urls up front and work through the array, instead of doing it recursively
     keep tables open thoughout the instance?
     Generate Keys does some weird stuff that people might not understand
+    last_updated needs to be updated when you run update
+    Should we have a last_synced date too?
 
-### printer
+### core -- show
     Put stuff in justified columns
-    When downloading, try to keep stuff on one line
+    --tree option?
+    --files option?
+    What do we want to show for files?
+        Size, path?
+        --flags for different info?
+
 
 ### Visualization
     Need good ways to view what's in the database
