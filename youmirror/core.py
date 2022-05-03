@@ -382,7 +382,7 @@ class YouMirror:
                 self.update(url=url, **kwargs)                      
             name = tuber.get_name(yt)                   # Get name for pretty printing
 
-            print(f"Syncing with {yt_string} \'{name}\'")
+            print(f"Syncing {yt_string} \'{name}\'... ", end = '')
 
             files_to_sync = dict()  
 
@@ -409,14 +409,14 @@ class YouMirror:
             active_options.update(configurer.get_yt(yt_string, url, self.config))
 
             # Download the files
-            print(f'Syncing {len(files_to_sync)} files')
+            print(f'{len(files_to_sync)} files')            # Number of files
             for filepath in files_to_sync:
-                file = files_to_sync[filepath]              # Get the file info
+                file: dict = files_to_sync[filepath]        # Get the file info
                 filename = str(Path(filepath).name)         # Get just the filename for pretty printing
                 parent = file["parent"]                     # Get the parent url
                 file_type = file["type"]                    # Get the file type "video", "audio", etc. 
                 yt = self.get_pytube(parent, self.cache)    # Get the pytube object   
-                print(f"Downloading {file_type} {filepath}")
+                print(f"Downloading {filepath}...", end = '')
                 if file["type"] == 'caption':               # If it's a caption record the language to use
                     active_options['language'] = file['language']
                 filepath = str(self.path/Path(filepath))    # Add the root to the filepath
@@ -424,10 +424,11 @@ class YouMirror:
                     file.update(specs)                      # Update the file info with the specs
                     files_table.update({filepath: file})    # Save the file info to the database
                     files_table.commit()                    # Commit the changes to the database
+                    status = printer.color("Done", "green")
                 else:
-                    print(f'Could not download {file_type} {filename}')
-                
-            print(f"Synced with \'{name}\'!")
+                    status = printer.color("Skipped", "yellow")
+                print(status)                               # Appending the status to the download line
+            
             return
 
         # If no url is specified, sync everything
@@ -441,7 +442,7 @@ class YouMirror:
         for url in urls_to_sync:
             self.sync(url=url, **kwargs)
 
-        print("All done!")
+        print(printer.color("All done!", "green"))
         return
 
 
@@ -485,7 +486,7 @@ class YouMirror:
             entry = databaser.get_entry(url, table)             # Get the entry from the table
             old_children = set(entry["children"])                    # Get the children from the entry
             difference = new_children.difference(old_children)       # Get the difference between the two sets
-            print(f'Found {len(difference)} new items for {yt_string} {name}')
+            print(f'Updating {yt_string} {name}... {len(difference)} new items')
             entry["children"] = new_children.union(old_children)     # Update the entry with the new children
 
             # Record parent's info
@@ -528,7 +529,6 @@ class YouMirror:
                 databaser.commit_table(t)
                 databaser.close_table(t)
 
-            print(f"Updated \'{name}\'!")
             return
 
         # If no url is specified, update everything
@@ -544,7 +544,7 @@ class YouMirror:
         if kwargs.get("sync"):   
             self.sync(url=url, **kwargs)
 
-        print("All set!")
+        print( printer.color("All set!", "green") )
         return
 
     def verify(self) -> None:

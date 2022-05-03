@@ -2,10 +2,21 @@
     In sync and update we wanna get all the urls up front and work through the array, instead of doing it recursively
     keep tables open thoughout the instance?
     Generate Keys does some weird stuff that people might not understand
+    last_updated needs to be updated when you run update
+    Should we have a last_synced date too?
 
-### printer
+### core -- show
     Put stuff in justified columns
-    When downloading, try to keep stuff on one line
+    --tree option?
+    --files option?
+    What do we want to show for files?
+        Size, path?
+        flags for different info?
+
+### core -- update
+    We can do more than just check for new files
+        What if a playlist name changes?
+        Update any metadata?
 
 ### Visualization
     Need good ways to view what's in the database
@@ -14,6 +25,9 @@
         Maybe like an export function in core which just exports the database to a csv file?
 
 ### Databaser
+    We could get collision if you add a video that is already there from a channel or playlist
+        How to resolve this
+            Need to start by detecting it
     Maybe we actually do need to hold the tables open in the core throughout the entire ym existence?
         We just can't try and close them
         Seems like we need to leave autocommit on too
