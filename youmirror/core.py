@@ -1,4 +1,3 @@
-# Builtins
 import logging  # Logging
 import os  # For calculating directory sizes
 import shutil  # For removing whole directories
@@ -8,12 +7,10 @@ from pathlib import \
     Path  # Helpful for ensuring text inputs translate well to real directories
 from typing import Union  # For typing
 
-# Pytube
 from pytube.helpers import safe_filename  # For making good paths & filenames
 
 import youmirror.configurer as configurer  # Manages the config file
 import youmirror.databaser as databaser  # Manages the database
-# Youmirror stuff
 import youmirror.downloader as downloader  # Does the downloading
 import youmirror.filer as filer  # Manages the filetree
 import youmirror.printer as printer  # Manages printing to the console

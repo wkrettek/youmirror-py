@@ -74,9 +74,14 @@ def get_metadata(yt: Union[Channel, Playlist, YouTube]) -> dict:
         meta["available"] = True  # We will add a check later to determine this
 
     elif type(yt) == YouTube:
-        meta["available"] = is_available(
-            yt
-        )  # Individual videos can be checked if they are available
+        meta["available"] = is_available(yt)
+        meta["upload_date"] = yt.publish_date
+        meta["length"] = yt.length
+        meta["age_restricted"] = yt.age_restricted
+        meta["author"] = yt.author
+        meta["description"] = yt.description
+        meta["views"] = yt.views
+        meta["keywords"] = yt.keywords
     return meta
 
 
@@ -151,6 +156,13 @@ def get_name(yt: Union[YouTube, Channel, Playlist]) -> str:
         logging.error(f"Failed to get name for {yt}")
         return None
 
+def upload_date(yt: YouTube) -> str:
+    '''
+    Returns the upload date of the video
+    '''
+    return yt.publish_date
+    
+
 
 def get_url(yt: Union[YouTube, Channel, Playlist]) -> str:
     """
@@ -168,6 +180,7 @@ def get_url(yt: Union[YouTube, Channel, Playlist]) -> str:
         logging.error(f"Failed to get url for {yt}")
         return None
 
+        
 
 def get_children(yt: Union[Channel, Playlist]) -> list[str]:
     """
