@@ -24,7 +24,7 @@ defaults = {  # These are the default global configs if not specified
     "dl_captions": False,  # Whether to download captions
     "dl_audio": False,  # Whether to download audio
     "dl_thumbnail": False,  # Whether to download the thumbnail
-    "captions": ["en", "a.en"],  # Which caption types to check for
+    "captions": ["a.en"],  # Which caption types to check for
 }
 
 config_file = "youmirror.toml"  # This is the name for the config file to be used

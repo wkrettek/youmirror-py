@@ -156,12 +156,12 @@ def get_name(yt: Union[YouTube, Channel, Playlist]) -> str:
         logging.error(f"Failed to get name for {yt}")
         return None
 
+
 def upload_date(yt: YouTube) -> str:
-    '''
+    """
     Returns the upload date of the video
-    '''
+    """
     return yt.publish_date
-    
 
 
 def get_url(yt: Union[YouTube, Channel, Playlist]) -> str:
@@ -180,7 +180,6 @@ def get_url(yt: Union[YouTube, Channel, Playlist]) -> str:
         logging.error(f"Failed to get url for {yt}")
         return None
 
-        
 
 def get_children(yt: Union[Channel, Playlist]) -> list[str]:
     """
