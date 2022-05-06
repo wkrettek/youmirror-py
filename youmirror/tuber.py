@@ -3,8 +3,8 @@ This module parses youtube urls, wraps them in pytube objects and
 pulls information from pytube objects
 ---
 '''
-from pytube import YouTube, Channel, Playlist, extract
-from pytube.exceptions import RegexMatchError
+from youmirror.pytube import YouTube, Channel, Playlist, extract
+from youmirror.pytube.exceptions import RegexMatchError
 from typing import Union
 import logging
 

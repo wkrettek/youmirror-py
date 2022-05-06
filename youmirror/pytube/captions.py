@@ -5,8 +5,8 @@ import xml.etree.ElementTree as ElementTree
 from html import unescape
 from typing import Dict, Optional
 
-from pytube import request
-from pytube.helpers import safe_filename, target_directory
+from . import request
+from .helpers import safe_filename, target_directory
 
 
 class Caption:

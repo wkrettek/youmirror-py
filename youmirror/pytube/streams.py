@@ -14,10 +14,10 @@ from urllib.error import HTTPError
 from urllib.parse import parse_qs
 from io import BufferedWriter, BytesIO
 
-from pytube import extract, request
-from pytube.helpers import safe_filename, target_directory
-from pytube.itags import get_format_profile
-from pytube.monostate import Monostate
+from . import extract, request
+from .helpers import safe_filename, target_directory
+from .itags import get_format_profile
+from .monostate import Monostate
 
 logger = logging.getLogger(__name__)
 

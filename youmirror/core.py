@@ -16,8 +16,8 @@ import youmirror.filer as filer             # Manages the filetree
 import youmirror.tuber as tuber             # Manages pytube objects
 
 #Pytube
-from pytube.helpers import safe_filename    # For making good paths & filenames
-from pytube import YouTube, Channel, Playlist   # Used for lots of stuff
+from youmirror.pytube.helpers import safe_filename    # For making good paths & filenames
+from youmirror.pytube import YouTube, Channel, Playlist   # Used for lots of stuff
 
 '''
 This is the core module

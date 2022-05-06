@@ -9,7 +9,7 @@ import warnings
 from typing import Any, Callable, Dict, List, Optional, TypeVar
 from urllib import request
 
-from pytube.exceptions import RegexMatchError
+from .exceptions import RegexMatchError
 
 logger = logging.getLogger(__name__)
 

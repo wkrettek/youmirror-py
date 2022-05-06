@@ -8,7 +8,7 @@ My first priority is finding the best matching resolution when the user specifie
 I could maybe make other types of downloads available. I think a possible one is like a metadata and another one is like the js. Could be useful
 
 '''
-from pytube import YouTube, Stream, Caption
+from youmirror.pytube import YouTube, Stream, Caption
 import logging
 from pathlib import Path
 import subprocess

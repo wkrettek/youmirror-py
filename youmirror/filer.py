@@ -22,7 +22,7 @@ This is what the filetree looks like:
 ----
 '''
 from pathlib import Path
-from pytube.helpers import safe_filename
+from youmirror.pytube.helpers import safe_filename
 import logging
 
 valid_file_types = {"video", "caption", "audio", "thumbnail"}  # Valid file types

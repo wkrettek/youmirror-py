@@ -4,8 +4,8 @@ import json
 import logging
 from typing import Dict, List, Optional, Tuple
 
-from pytube import extract, Playlist, request
-from pytube.helpers import uniqueify
+from youmirror.pytube import extract, Playlist, request
+from youmirror.pytube.helpers import uniqueify
 
 logger = logging.getLogger(__name__)
 
