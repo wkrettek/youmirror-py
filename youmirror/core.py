@@ -214,6 +214,7 @@ class YouMirror:
                     yt, parent_keys, active_options, paths_table
                 )  # Get the keys for the db
                 name = child_keys["name"]  # Get the name of the pytube object
+                name = printer.color(name, "cyan") # Format the name
                 print(f"Adding '{name}'")
                 singles_to_add[child_url] = child_keys  # Mark it for adding
                 # logging.info(f"Adding {child_url} with keys {child_keys}")
@@ -550,10 +551,7 @@ class YouMirror:
                 return False
             if tuber.link_type(url) == "single":  # Singles dont get updated
                 return False
-            if not (
-                new_children := set(tuber.get_children(yt))
-            ):  # Get the children urls
-                return False
+
             if not (yt_string := tuber.link_type(url)):  # Get the type of link
                 return False
             name = tuber.get_name(yt)  # Get the name for pretty printing
@@ -563,6 +561,11 @@ class YouMirror:
             )  # Load the settings for this yt
 
             # Calculate new children
+            print(f"Updating {yt_string} {name}...", end='')
+            if not (
+                new_children := set(tuber.get_children(yt))
+            ):  # Get the children urls
+                return False
             table = databaser.open_table(
                 db_path, yt_string
             )  # Open the appropriate table
@@ -571,7 +574,7 @@ class YouMirror:
             difference = new_children.difference(
                 old_children
             )  # Get the difference between the two sets
-            print(f"Updating {yt_string} {name}... {len(difference)} new items")
+            print(f"{len(difference)} new")
             entry["children"] = new_children.union(
                 old_children
             )  # Update the entry with the new children

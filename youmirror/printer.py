@@ -1,16 +1,18 @@
 """
 This module is for pretty printing on the output
 """
+
 _colors = {
-    "header": "\033[95m",
-    "blue": "\033[94m",
-    "cyan": "\033[96m",
-    "green": "\033[92m",
-    "yellow": "\033[93m",
-    "red": "\033[91m",
+    "red": "\033[31m",
+    "green": "\033[32m",
+    "yellow": "\033[33m",
+    "blue": "\033[34m",
+    "magenta": "\033[35m",
+    "cyan": "\033[36m",
+    "white": "\033[37m",
     "endc": "\033[0m",
     "bold": "\033[1m",
-    "underline": "\033[4m",
+    "underline": "\033[4m"
 }
 
 
@@ -30,3 +32,25 @@ def color(s: str, color: str):
     Takes the text and wraps it in the chosen format
     """
     return _colors[color] + s + _colors["endc"]
+
+
+class AnsiFore:
+    BLACK           = 30
+    RED             = 31
+    GREEN           = 32
+    YELLOW          = 33
+    BLUE            = 34
+    MAGENTA         = 35
+    CYAN            = 36
+    WHITE           = 37
+    RESET           = 39
+
+    # These are fairly well supported, but not part of the standard.
+    LIGHTBLACK_EX   = 90
+    LIGHTRED_EX     = 91
+    LIGHTGREEN_EX   = 92
+    LIGHTYELLOW_EX  = 93
+    LIGHTBLUE_EX    = 94
+    LIGHTMAGENTA_EX = 95
+    LIGHTCYAN_EX    = 96
+    LIGHTWHITE_EX   = 97
