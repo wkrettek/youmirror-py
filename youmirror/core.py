@@ -663,6 +663,9 @@ class YouMirror:
         """
         Prints the current state of the mirror
         --- This is obviously pretty barebones, a lot could go into formatting this and offering different options
+        Link Type -- Name -- URL -- Path -- Size
+        | -- # Items -- Files
+
         """
 
         # Localize our paths so we don't have to type self a bunch of times
