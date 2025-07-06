@@ -1,6 +1,0 @@
-click==8.1.3; python_version >= "3.7"
-colorama==0.4.4; python_version >= "3.7" and python_full_version < "3.0.0" and platform_system == "Windows" or platform_system == "Windows" and python_version >= "3.7" and python_full_version >= "3.5.0"
-pytube @ git+https://github.com/wkrettek/pytube@master ; python_version >= "3.6"
-sqlitedict==2.0.0
-toml==0.10.2; (python_version >= "2.6" and python_full_version < "3.0.0") or (python_full_version >= "3.3.0")
-typer==0.4.1; python_version >= "3.6"

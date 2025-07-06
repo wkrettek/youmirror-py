@@ -7,11 +7,11 @@ You can install from github by using
 
 `pip install git+https://github.com/wkrettek/youmirror.git`
 
-If you have `poetry` you can clone this repository and install with
+If you have `uv` you can clone this repository and install with
 
-`poetry install --no-dev`
+`uv sync`
 
-youmirror is intended for **python 3.9** and higher
+youmirror is intended for **python 3.11** and higher
 
 ## Description
 
