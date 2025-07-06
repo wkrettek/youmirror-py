@@ -9,7 +9,7 @@ yts     - Youtube ids and their settings
 ids     - YouTube specific ids (keys)
 
 '''
-import toml
+import tomlkit
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -106,7 +106,8 @@ def load_config(config_path: str) -> dict:
     '''
     try:
         if Path(config_path).is_file():
-            config = toml.load(open(config_path))   # Dictionary from the config file
+            with open(config_path, 'r') as f:
+                config = tomlkit.load(f)   # Dictionary from the config file
             return config
         else:
             return None
@@ -119,7 +120,7 @@ def save_config(config_path: Path, config: dict) -> Path:
     '''
     try:
         if config_path.is_file():                      # Check if the file exists     
-            toml_string = toml.dumps(config)           # Convert the config to a toml string
+            toml_string = tomlkit.dumps(config)           # Convert the config to a toml string
             config_path.open('w').write(toml_string)   # Write the toml string to the config file
         else:
             logging.error(f"Config file {config_path} does not exist")
