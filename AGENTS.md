@@ -7,7 +7,7 @@ This file provides agents with guidance when working in this project.
     - Use modern `dict` `list` instead of `Dict` `List`
     - Use descriptive variable names
     - Use checks when accessing dictionary keys or doing actions that may fail
-    - Break out exception handlers into specfic exceptions when relevant
+    - Break out exception handlers into specific exceptions when relevant
     - Document complex functions with docstrings
 
 ## Workflow
