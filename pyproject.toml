@@ -1,25 +1,27 @@
-[tool.poetry]
+[project]
 name = "youmirror"
-version = "0.5.0"
+version = "0.5.1"
 description = "Create a mirror filetree of your favorite youtube videos"
-authors = ["wkrettek <warrenkrettek@gmail.com>"]
-license = "MIT"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+dependencies = [
+    "pytube",
+    "sqlitedict==2.0.0",
+    "typer==0.4.1",
+]
 
-[tool.poetry.dependencies]
-python = "^3.9"
-typer = "^0.4.1"
-sqlitedict = "2.0.0"
-toml = "^0.10.2"
-pytube = {git = "https://github.com/wkrettek/pytube"}
+[project.scripts]
+youmirror = "youmirror.cli:main"
 
-[tool.poetry.scripts]
-youmirror = 'youmirror.cli:main'
+[dependency-groups]
+dev = [
+    "pytest==8.4.1",
+]
 
-
-[tool.poetry.dev-dependencies]
-ipykernel = "^6.13.0"
-black = "^22.3.0"
-pytest = "^7.1.2"
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv.sources]
+pytube = { git = "https://github.com/wkrettek/pytube" }

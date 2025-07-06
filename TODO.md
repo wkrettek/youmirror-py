@@ -1,7 +1,7 @@
 ### core
-    In sync and update we wanna get all the urls up front and work through the array, instead of doing it recursively
+-    In sync and update we wanna get all the urls up front and work through the array, instead of doing it recursively
     keep tables open thoughout the instance?
-    Generate Keys does some weird stuff that people might not understand
+-    Generate Keys does some weird stuff that people might not understand
 
 ### printer
     Put stuff in justified columns
