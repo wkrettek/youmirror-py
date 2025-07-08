@@ -10,6 +10,7 @@ dependencies = [
     "sqlitedict==2.0.0",
     "tomlkit==0.13.3",
     "typer==0.15.4",
+    "yt-dlp==2025.6.30",
 ]
 
 [project.scripts]
