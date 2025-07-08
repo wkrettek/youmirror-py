@@ -8,6 +8,7 @@ from pytube import YouTube, Channel, Playlist, extract
 from pytube.exceptions import RegexMatchError
 from typing import Union
 import logging
+from yt_dlp import YoutubeDL
 
 
 def link_type(url: str) -> str:
