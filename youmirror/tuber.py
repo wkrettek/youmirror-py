@@ -11,6 +11,25 @@ import logging
 from yt_dlp import YoutubeDL
 
 
+def extract_info(url: str, extract_flat: bool = False) -> dict:
+    """
+    Wrapper for yt-dlp's extract_info. Extract once, use everywhere.
+    """
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'extract_flat': extract_flat,
+    }
+    
+    try:
+        with YoutubeDL(ydl_opts) as ydl:
+            info = ydl.extract_info(url, download=False)
+            return info
+    except Exception as e:
+        logging.error(f"Failed to extract info from {url}: {e}")
+        return None
+
+
 def link_type(url: str) -> str:
     """
     Really rough way to narrow down a link before creating a pytube object
@@ -29,20 +48,15 @@ def link_type(url: str) -> str:
         return None
 
 
-def link_id(url: str, yt_string=None) -> str:
+def link_id(info: dict, yt_string=None) -> str:
     """
-    Uses pytube's extract module to get the id from a url (more lightweight than creating an object)
+    Gets the ID from an info dict
     """
-    yt_string_to_func = {
-        "channel": extract.channel_name,
-        "playlist": extract.playlist_id,
-        "single": extract.video_id,
-    }  # Translation dict from yt type to function
-
-    if not yt_string:  # Calculate the yt_string if not passed
-        yt_string = link_type(url)
-    func = yt_string_to_func[yt_string]  # Extract the proper id from the url
-    return func(url)
+    if not isinstance(info, dict):
+        logging.error(f"Expected dict, got {type(info)}")
+        return None
+    
+    return info.get('id', None)
 
 
 def yt_to_type_string(yt: Union[Channel, Playlist, YouTube]) -> str:
@@ -90,32 +104,33 @@ def is_available(yt: YouTube) -> bool:
     return True
 
 
-def new_pytube(url: str) -> Union[YouTube, Channel, Playlist]:
-    """
-    This replaces get_pytube and returns a new pytube object from url
-    """
-    objects = {"channel": Channel, "playlist": Playlist, "single": YouTube}
-    url_type = link_type(url)  # Returns what type of link it is (as string)
-    try:
-        object = wrap_url(
-            url, objects[url_type]
-        )  # Wrap the url in the proper pytube object
-        return object
-    except RegexMatchError:
-        logging.error("Regex Error: could not find matching video for url %s", url)
-        return None
-    except Exception as e:
-        logging.exception(f"Failed to parse Youtube link due to {e}")
-        return None  # This indicates something went wrong, but we will handle it above
+# def new_pytube(url: str) -> Union[YouTube, Channel, Playlist]:
+#     """
+#     This replaces get_pytube and returns a new pytube object from url
+#     """
+#     objects = {"channel": Channel, "playlist": Playlist, "single": YouTube}
+#     url_type = link_type(url)  # Returns what type of link it is (as string)
+#     try:
+#         object = wrap_url(
+#             url, objects[url_type]
+#         )  # Wrap the url in the proper pytube object
+#         return object
+#     except RegexMatchError:
+#         logging.error("Regex Error: could not find matching video for url %s", url)
+#         return None
+#     except Exception as e:
+#         logging.exception(f"Failed to parse Youtube link due to {e}")
+#         return None  # This indicates something went wrong, but we will handle it above
+#
 
 
-def wrap_url(
-    url: str, object: Union[YouTube, Channel, Playlist]
-) -> Union[YouTube, Channel, Playlist]:
-    """
-    Wraps the url in the proper pytube object
-    """
-    return object(url)
+# def wrap_url(
+#     url: str, object: Union[YouTube, Channel, Playlist]
+# ) -> Union[YouTube, Channel, Playlist]:
+#     """
+#     Wraps the url in the proper pytube object
+#     """
+#     return object(url)
 
 
 def get_id(yt: Union[YouTube, Channel, Playlist]) -> str:
@@ -135,38 +150,26 @@ def get_id(yt: Union[YouTube, Channel, Playlist]) -> str:
         return None
 
 
-def get_name(yt: Union[YouTube, Channel, Playlist]) -> str:
+def get_name(info: dict) -> str:
     """
-    Returns the name of the pytube object
+    Returns the name/title from yt-dlp info dict
     """
-    type_to_name = {
-        YouTube: "title",
-        Channel: "channel_name",
-        Playlist: "title",
-    }  # Translation dict from type to attribute
-    t = type(yt)  # Get the type of the object
-    if t in type_to_name:  # If it is a valid type
-        return getattr(yt, type_to_name[t])  # Return the attribute
-    else:
-        logging.error(f"Failed to get name for {yt}")
+    if not isinstance(info, dict):
+        logging.error(f"Expected dict, got {type(info)}")
         return None
+    
+    return info.get('title', info.get('uploader', 'Unknown'))
 
 
-def get_url(yt: Union[YouTube, Channel, Playlist]) -> str:
+def get_url(info: dict) -> str:
     """
-    Returns the url of the pytube object
+    Returns the sanitized URL from yt-dlp info dict
     """
-    type_to_url = {
-        YouTube: "watch_url",
-        Channel: "vanity_url",
-        Playlist: "playlist_url",
-    }  # Translation dict from type to property
-    t = type(yt)  # Get the type of the object
-    if t in type_to_url:  # If it is a valid type
-        return getattr(yt, type_to_url[t])  # Return the attribute
-    else:
-        logging.error(f"Failed to get url for {yt}")
+    if not isinstance(info, dict):
+        logging.error(f"Expected dict, got {type(info)}")
         return None
+    
+    return info.get('webpage_url', info.get('url', None))
 
 
 def get_children(yt: Union[Channel, Playlist]) -> list[str]:

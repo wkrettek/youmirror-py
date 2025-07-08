@@ -118,6 +118,24 @@ class YouMirror:
 
         # Parse the url & create pytube object
         try:
+            # Test yt-dlp functions
+            print(f"Testing yt-dlp with URL: {url}")
+            
+            # Extract info once
+            info = tuber.extract_info(url)
+            if not info:
+                print("Failed to extract info")
+                return False
+                
+            yt_dlp_id = tuber.link_id(info)
+            print(f"yt-dlp extracted ID: {yt_dlp_id}")
+            
+            yt_dlp_url = tuber.get_url(info)
+            print(f"yt-dlp sanitized URL: {yt_dlp_url}")
+            
+            yt_dlp_name = tuber.get_name(info)
+            print(f"yt-dlp extracted name: {yt_dlp_name}")
+            
             if not (
                 yt_string := tuber.link_type(url)
             ):  # Get the url type (channel, playlist, single)
