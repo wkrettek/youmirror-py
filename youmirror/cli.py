@@ -1,5 +1,7 @@
+import logging
+
 import typer
-from typing import Optional
+
 from youmirror.core import YouMirror
 
 app = typer.Typer(
@@ -7,28 +9,14 @@ app = typer.Typer(
 )
 
 
-def main():
+def main() -> None:
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
     app()
 
 
-@app.command()
-def sync(
-    url: str = typer.Argument(None, help="Specify the url to sync"),
-    mirror: str = typer.Option(
-        "./", *("-m", "--mirror"), help="The mirror directory to sync"
-    ),
-    update: bool = typer.Option(
-        False, "--update", help="Update the database before syncing"
-    ),
-    # dry_run : Optional[bool] = typer.Option(default=False, show_choices=False, help="Calculates changes with no execution"),
-):
-    """
-    Downloads videos to match the mirror
-    """
-    kwargs = {"update": update}
-    ym = YouMirror(root=mirror)
-    ym.sync(url=url, **kwargs)
-    return
+def exit_on_failure(ok: bool) -> None:
+    if not ok:
+        raise typer.Exit(code=1)
 
 
 @app.command()
@@ -36,139 +24,73 @@ def new(root: str = typer.Argument(".", help="The directory to create the mirror
     """
     Create a new mirror in the given directory [default:'./']
     """
-    ym = YouMirror(root=root)
-    ym.new()
-    return
+    YouMirror(root=root).new()
 
 
 @app.command()
 def add(
-    url: str = typer.Argument(None, help="Specify the url to add"),
-    mirror: Optional[str] = typer.Option(
-        "./", *("-m", "--mirror"), help="Specify the mirror directory"
+    url: str = typer.Argument(..., help="Specify the url to add"),
+    mirror: str = typer.Option(
+        "./", "-m", "--mirror", help="Specify the mirror directory"
     ),
-    resolution: Optional[str] = typer.Option(
-        "720p", "--resolution", help="Preferred resolution to download"
+    resolution: str | None = typer.Option(
+        None, "--resolution", help="'best' (default) or a ceiling like '1080p'"
     ),
-    captions: Optional[bool] = typer.Option(
-        None, "--captions", show_default=True, help="Download captions if available"
+    name: str | None = typer.Option(
+        None, "--name", help="Folder name for the source [default: its title]"
     ),
-    no_video: Optional[bool] = typer.Option(
-        None, "--no-video", show_default=True, help="Don't download video"
-    ),
-    audio: Optional[bool] = typer.Option(
-        None, "--audio", show_default=True, help="Download audio separately"
-    ),
-    thumbnail: Optional[bool] = typer.Option(
-        None, "--thumbnail", show_default=True, help="Download thumbnail"
-    ),
-    force: Optional[bool] = typer.Option(
-        False, *("-f", "--force"), help="Force download without asking confirmation"
-    ),
-    # dry_run : Optional[bool] = typer.Option(False, "--dry-run", help="Calculates changes with no execution"),
-    no_dl: Optional[bool] = typer.Option(
+    no_dl: bool = typer.Option(
         False, "--no-dl", help="Adds the url to the mirror without downloading"
     ),
 ):
     """
     Adds the url to the mirror and downloads videos
     """
-    video = None
-    if no_video:  # Initializing dl_video
-        video = not no_video
-    kwargs = {
-        "resolution": resolution,
-        "dl_video": video,
-        "dl_captions": captions,
-        "dl_audio": audio,
-        "dl_thumbnail": thumbnail,
-        "force": force,
-        "dry_run": "",
-        "no_dl": no_dl,
-    }
-    ym = YouMirror(root=mirror)
-    ym.add(url, **kwargs)
-    return
+    exit_on_failure(YouMirror(root=mirror).add(url, resolution, name, no_dl))
 
 
 @app.command()
 def remove(
     url: str,
-    mirror: Optional[str] = typer.Option(
-        "./", *("-m", "--mirror"), help="Mirror directory to remove from"
+    mirror: str = typer.Option(
+        "./", "-m", "--mirror", help="Mirror directory to remove from"
     ),
-    no_rm: Optional[bool] = typer.Option(
-        False, "--no-rm", help="Stop tracking without deleting any files"
+    delete: bool = typer.Option(
+        False, "--delete", help="Also delete the downloaded files"
     ),
 ):
     """
-    Removes the url from the mirror and deletes all files
+    Stops tracking the url in the mirror
     """
-    kwargs = {"no_rm": no_rm}
-    ym = YouMirror(root=mirror)
-    ym.remove(url, **kwargs)
-
-
-# @app.command()
-# def check():
-#     '''
-#     Checks the database to see if any mirrored files are no longer supported by Youtube.
-#     Generally updates metadata
-#     '''
-#     return
+    exit_on_failure(YouMirror(root=mirror).remove(url, delete))
 
 
 @app.command()
-def update(
-    url: str = typer.Argument(None, help="Specify the url to update"),
-    mirror: Optional[str] = typer.Option(
-        "./", *("-m", "--mirror"), help="Root directory for the mirror"
+def sync(
+    url: str = typer.Argument(None, help="Specify the url to sync"),
+    mirror: str = typer.Option(
+        "./", "-m", "--mirror", help="The mirror directory to sync"
     ),
-    sync: Optional[bool] = typer.Option(
-        False, "--sync", help="Sync the database after updating"
+    dry_run: bool = typer.Option(
+        False, "--dry-run", help="Shows what would download without downloading"
     ),
 ):
     """
-    Updates the mirror when new videos are available
+    Checks for new videos and downloads everything not downloaded yet
     """
-    kwargs = {"sync": sync}
-    ym = YouMirror(root=mirror)
-    ym.update(url=url, **kwargs)
+    exit_on_failure(YouMirror(root=mirror).sync(url, dry_run))
 
 
 @app.command()
 def show(
     mirror: str = typer.Option(
-        ".", *("-m", "--mirror"), help="The mirror directory to show"
+        ".", "-m", "--mirror", help="The mirror directory to show"
     ),
 ):
     """
     Shows the state of the mirror
     """
-    ym = YouMirror(root=mirror)
-    ym.show()
-
-
-# @app.command()
-# def config(root: str = typer.Argument(None)):
-#     '''
-#     Allows you edit the config file
-#     '''
-#     pass
-
-# @app.command()
-# def archive(root: str = typer.Argument(None)):
-#     '''
-#     Uploads the mirror to the internet archive
-#     '''
-#     pass
-
-# @app.command()
-# def play(root: str = typer.Argument(None)):
-#     '''
-#     Plays the video or something
-#     '''
-#     pass
+    exit_on_failure(YouMirror(root=mirror).show())
 
 
 if __name__ == "__main__":
