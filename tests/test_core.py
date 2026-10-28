@@ -1,53 +1,53 @@
-"""
-Gonna use this just to verify nothing breaks in the core (Or it does break on invalid input!)
-"""
-# TODO core does not work right now
-# import youmirror.core as core
-# import youmirror.configurer as configurer
-# import youmirror.databaser as databaser
-# from pathlib import Path
-# import pytest
-#
-# # Create test config and db
-# config = configurer.new_config(Path(configurer.config_file), '.')
-# Path(databaser.db_file).touch()
-#
-# # Create a new YouMirror object
-# ym = core.YouMirror(root='.')
-#
-# # Input some invalid urls to verify all our funcs that take them will return before it's too late
-# def test_invalid_urls():
-#     '''
-#     Runs invalid urls through core functions that take them and verifies they return early
-#     '''
-#     # Invalid urls we wanna test against
-#     invalid_urls = ["JUNK", "https://github.com", "https://www.youtube.com/watch?v=JUNK", "https://www.youtube.com/user/INVALID_USER", "https://www.youtube.com/channel/INVALID_CHANNEL", "https://www.youtube.com/c/INVALID_CHANNEL", "https://www.youtube.com/playlist?list=INVALID_PLAYLIST"]
-#
-#     funcs = [ym.add, ym.remove, ym.update, ym.sync] # All the functions we wanna test
-#
-#     # Run the functions on the invalid urls
-#     for func in funcs:                              # For each function
-#         for url in invalid_urls:                    # For each invalid url
-#             assert func(url) == False               # Verify using the invalid url returns False
-#
-# # Just add and remove a single and verify there is no crash
-# def test_add_sync_remove_single():
-#     '''
-#     Adds a single, syncs it, and removes it
-#     '''
-#     # Add a single
-#     try:
-#         # Force add for speed
-#         ym.add("https://www.youtube.com/watch?v=6NQHtVrP3gE", **{"no_dl": True, "force": True})
-#         ym.sync("https://www.youtube.com/watch?v=6NQHtVrP3gE")
-#         ym.remove("https://www.youtube.com/watch?v=6NQHtVrP3gE", **{'no_rm': True, 'force': True})
-#     except Exception as e:
-#         pytest.fail("Failed due to %s", e)
-#
-# # Cleanup
-# def test_cleanup():
-#     '''
-#     Cleanup
-#     '''
-#     Path(databaser.db_file).unlink()
-#     Path(configurer.config_file).unlink()
+from pathlib import Path
+from unittest import mock
+
+import pytest
+
+from youmirror.configurer import load_config, save_config, set_yt
+from youmirror.core import YouMirror, folder_name, format_sort, source_dir, ydl_args
+
+
+def test_folder_name_matches_old_layout():
+    assert folder_name("Me at the zoo") == "Me_at_the_zoo"
+    assert folder_name("Example  Channel ") == "Example_Channel"
+
+
+def test_source_dir():
+    assert source_dir("channel", "Example Channel") == "channels/Example_Channel"
+    assert source_dir("playlist", "asdfmovie") == "playlists/asdfmovie"
+    assert source_dir("single", "anything") == "singles"
+
+
+def test_format_sort():
+    assert format_sort("best") == "res,vcodec:av01"
+    assert format_sort("1080p") == "res:1080,vcodec:av01"
+    with pytest.raises(ValueError):
+        format_sort("high")
+
+
+def test_ydl_args_uses_mirror_paths(tmp_path: Path):
+    args = ydl_args(tmp_path, "channel", {"name": "jawed"}, dry_run=True)
+    output = args[args.index("--output") + 1]
+    assert output.startswith(str(tmp_path / "channels/jawed"))
+    assert args[args.index("--download-archive") + 1] == str(
+        tmp_path / ".youmirror/archive.txt"
+    )
+    assert "--simulate" in args
+
+
+def test_bad_resolution_is_an_error_not_a_crash(tmp_path: Path):
+    mirror = YouMirror(root=str(tmp_path))
+    mirror.new()
+    with mock.patch(
+        "youmirror.core.identify", return_value=("channel", "A")
+    ) as identify:
+        assert not mirror.add("https://www.youtube.com/@a", "high", None, True)
+    identify.assert_not_called()
+
+    config = load_config(mirror.config_path)
+    set_yt("playlist", "https://a", config, {"name": "A", "resolution": "high"})
+    set_yt("playlist", "https://b", config, {"name": "B"})
+    save_config(mirror.config_path, config)
+    with mock.patch("youmirror.core.run_ydl", return_value=0) as run_ydl:
+        mirror.sync(None, dry_run=True)
+    assert [call.args[1] for call in run_ydl.call_args_list] == ["https://b"]
