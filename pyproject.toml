@@ -16,7 +16,7 @@ youmirror = "youmirror.cli:main"
 
 [dependency-groups]
 dev = [
-    "pytest==8.4.1",
+    "pytest==9.2.0",
 ]
 
 [build-system]
