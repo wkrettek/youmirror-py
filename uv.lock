@@ -791,7 +791,7 @@ dev = [
 requires-dist = [
     { name = "tomlkit", specifier = "==0.13.3" },
     { name = "typer", specifier = "==0.15.4" },
-    { name = "yt-dlp", extras = ["default"], specifier = "==2026.10.21" },
+    { name = "yt-dlp", extras = ["default"], specifier = ">=2026.10.21" },
 ]
 
 [package.metadata.requires-dev]
