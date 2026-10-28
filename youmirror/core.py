@@ -25,7 +25,7 @@ video_template = "%(title)s [%(id)s]"  # Folder and file name for each video
 
 def folder_name(name: str) -> str:
     """
-    Turns a source name into a folder name, "The Minute Hour" -> "The_Minute_Hour"
+    Turns a source name into a folder name, "Me at the zoo" -> "Me_at_the_zoo"
     """
     return re.sub(r"\s+", "_", sanitize_filename(name).strip())
 

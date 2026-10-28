@@ -17,14 +17,14 @@ def test_new_config_round_trip(tmp_path: Path):
     config = load_config(config_path)
     assert config["youmirror"]["name"] == "mirror"
 
-    url = "https://www.youtube.com/@suckerpinch"
-    set_yt("channel", url, config, {"name": "suckerpinch", "resolution": "1080p"})
+    url = "https://www.youtube.com/@jawed"
+    set_yt("channel", url, config, {"name": "jawed", "resolution": "1080p"})
     save_config(config_path, config)
 
     config = load_config(config_path)
     assert find_yt(url, config) == "channel"
     assert get_sources(config) == [
-        ("channel", url, {"name": "suckerpinch", "resolution": "1080p"})
+        ("channel", url, {"name": "jawed", "resolution": "1080p"})
     ]
 
     remove_yt("channel", url, config)
