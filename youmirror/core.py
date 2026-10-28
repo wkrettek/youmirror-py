@@ -137,6 +137,12 @@ class YouMirror:
         if configurer.find_yt(url, config):
             logger.error(f"url '{url}' already exists in the mirror")
             return False
+        if resolution:
+            try:
+                format_sort(resolution)  # Fail early on a bad value
+            except ValueError as e:
+                logger.error(e)
+                return False
         if not (identified := identify(url)):
             return False
         yt_string, found_name = identified
@@ -145,7 +151,6 @@ class YouMirror:
             "last_updated": datetime.now().strftime("%Y-%m-%d"),
         }
         if resolution:
-            format_sort(resolution)  # Fail early on a bad value
             settings["resolution"] = resolution
         configurer.set_yt(yt_string, url, config, settings)
         configurer.save_config(self.config_path, config)
@@ -192,7 +197,11 @@ class YouMirror:
         (self.path / state_dir).mkdir(exist_ok=True)
         for yt_string, source_url, settings in sources:
             logger.info(f"Syncing {yt_string} '{settings.get('name', source_url)}'")
-            args = ydl_args(self.path, yt_string, settings, dry_run)
+            try:
+                args = ydl_args(self.path, yt_string, settings, dry_run)
+            except ValueError as e:
+                logger.error(f"Skipping '{source_url}': {e}")
+                continue
             # Private or removed videos fail every run, so failures are warnings
             if run_ydl(args, source_url) != 0:
                 logger.warning(

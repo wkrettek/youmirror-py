@@ -1,8 +1,10 @@
 from pathlib import Path
+from unittest import mock
 
 import pytest
 
-from youmirror.core import folder_name, format_sort, source_dir, ydl_args
+from youmirror.configurer import load_config, save_config, set_yt
+from youmirror.core import YouMirror, folder_name, format_sort, source_dir, ydl_args
 
 
 def test_folder_name_matches_old_layout():
@@ -31,3 +33,21 @@ def test_ydl_args_uses_mirror_paths(tmp_path: Path):
         tmp_path / ".youmirror/archive.txt"
     )
     assert "--simulate" in args
+
+
+def test_bad_resolution_is_an_error_not_a_crash(tmp_path: Path):
+    mirror = YouMirror(root=str(tmp_path))
+    mirror.new()
+    with mock.patch(
+        "youmirror.core.identify", return_value=("channel", "A")
+    ) as identify:
+        assert not mirror.add("https://www.youtube.com/@a", "high", None, True)
+    identify.assert_not_called()
+
+    config = load_config(mirror.config_path)
+    set_yt("playlist", "https://a", config, {"name": "A", "resolution": "high"})
+    set_yt("playlist", "https://b", config, {"name": "B"})
+    save_config(mirror.config_path, config)
+    with mock.patch("youmirror.core.run_ydl", return_value=0) as run_ydl:
+        mirror.sync(None, dry_run=True)
+    assert [call.args[1] for call in run_ydl.call_args_list] == ["https://b"]
