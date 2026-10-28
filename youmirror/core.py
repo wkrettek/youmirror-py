@@ -85,13 +85,6 @@ def run_ydl(args: list[str], url: str) -> int:
     Runs yt-dlp on the url and returns its exit code (0 means every video succeeded)
     """
     ydl_opts = yt_dlp.parse_options(args).ydl_opts
-    # NOTE: --embed-subs and --embed-thumbnail delete the sidecar files unless told
-    # they were requested on their own, which the yt-dlp CLI does internally.
-    for postprocessor in ydl_opts["postprocessors"]:
-        if postprocessor["key"] == "FFmpegEmbedSubtitle":
-            postprocessor["already_have_subtitle"] = True
-        if postprocessor["key"] == "EmbedThumbnail":
-            postprocessor["already_have_thumbnail"] = True
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         return ydl.download([url])
 
