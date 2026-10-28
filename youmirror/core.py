@@ -62,6 +62,9 @@ def ydl_args(root: Path, yt_string: str, settings: dict, dry_run: bool) -> list[
         "--format-sort", format_sort(resolution),
         "--merge-output-format", "mkv",
         "--output", str(folder / video_template / f"{video_template}.%(ext)s"),
+        # Playlist and channel metadata go beside the video folders, not in one
+        "--output", f"pl_infojson:{folder / video_template}.%(ext)s",
+        "--output", f"pl_thumbnail:{folder / video_template}.%(ext)s",
         "--download-archive", str(root / state_dir / archive_file),
         "--write-subs", "--write-auto-subs", "--sub-langs", "en", "--sub-format", "vtt",
         "--embed-subs",
